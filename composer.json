@@ -1,0 +1,31 @@
+{
+  "name": "ipunkt/laravel-jaeger",
+  "description": "Send basic",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Sven Speckmaier",
+      "email": "sps@ipunkt.biz"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Ipunkt\\LaravelJaeger\\": "LaravelJaeger/"
+    }
+  },
+  "minimum-stability": "dev",
+  "require": {
+    "php": "^7.1.3",
+    "jukylin/jaeger-php": "dev-master@dev",
+    "ramsey/uuid": "^3.8",
+    "laravel/framework": "^5"
+  },
+  "extra": {
+    "laravel": {
+        "providers": [
+            "Ipunkt\\LaravelJaeger\\Provider"
+        ]
+    }
+  }
+}
