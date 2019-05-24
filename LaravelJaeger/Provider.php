@@ -4,7 +4,7 @@ use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
-use Ipunkt\LaravelJaegerRabbitMQ\MessageContext\SpanContext;
+use Ipunkt\LaravelJaeger\Context\SpanContext;
 use Event;
 use DB;
 use Log;
@@ -24,7 +24,7 @@ class Provider extends ServiceProvider
 
         // Setup a unique ID for each request. This will allow us to find
         // the request trace in the jaeger ui
-        $this->app->instance('context', new SpanContext());
+        $this->app->instance('context', app(SpanContext::class) );
     }
 
     public function boot()
