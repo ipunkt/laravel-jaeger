@@ -11,7 +11,12 @@
   ],
   "autoload": {
     "psr-4": {
-      "Ipunkt\\LaravelJaeger\\": "LaravelJaeger/"
+      "Ipunkt\\LaravelJaeger\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Ipunkt\\LaravelJaegerTests\\": "tests/"
     }
   },
   "minimum-stability": "dev",
@@ -28,5 +33,8 @@
             "Ipunkt\\LaravelJaeger\\Provider"
         ]
     }
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^8.1"
   }
 }
