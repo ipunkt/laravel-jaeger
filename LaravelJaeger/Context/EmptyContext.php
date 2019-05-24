@@ -28,22 +28,6 @@ class EmptyContext implements Context
     }
 
     public function inject(array &$messageData) {
-
-        $this->injectGlobaSpanData($messageData);
-    }
-
-    protected function injectGlobaSpanData(array &$messageData)
-    {
-        /**
-         * @var Span $span
-         */
-        $span = app('context.tracer.globalSpan');
-
-        /**
-         * @var Jaeger $tracer
-         */
-        $tracer = app('context.tracer');
-        $tracer->inject($span->getContext(), TEXT_MAP, $messageData);
     }
 
     public function parse(string $name, array $data)
