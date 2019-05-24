@@ -49,7 +49,7 @@ class TagPropagator
      */
     public function inject(array &$data)
     {
-        $messageData[$this->dataCarrierKey] = $this->propagatedTags;
+        $message[$this->dataCarrierKey] = $this->propagatedTags;
     }
 
     public function apply(Span $span)
