@@ -107,7 +107,7 @@ class SpanContext implements Context
     {
         $context = $this->messageSpan->getContext();
 
-        app('context.tracer')->inject($context, TEXT_MAP, $messageData);
+        $this->tracer->inject($context, TEXT_MAP, $messageData);
 
         $this->tagPropagator->inject($messageData);
     }
