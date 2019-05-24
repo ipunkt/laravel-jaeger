@@ -1,5 +1,6 @@
 <?php namespace Ipunkt\LaravelJaeger;
 
+use Artisan;
 use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\ServiceProvider;
@@ -36,6 +37,7 @@ class Provider extends ServiceProvider
 	    $this->registerEvents();
 
 	    $this->parseRequest();
+	    $this->parseCommand();
     }
 
     protected function registerEvents(): void
@@ -84,9 +86,20 @@ class Provider extends ServiceProvider
 	private function parseRequest() {
 
 		if ( app()->runningInConsole() )
-			return;
+		    return;
 
 		app('context')->parse( request()->url(), request()->input() );
 	}
+
+    private function parseCommand()
+    {
+        if ( !app()->runningInConsole() ) {
+            return;
+        }
+
+        $currentArgs = request()->server('argv');
+        $commandLine = implode(' ', $currentArgs);
+        app('context')->parse( $commandLine, [] );
+    }
 
 }
