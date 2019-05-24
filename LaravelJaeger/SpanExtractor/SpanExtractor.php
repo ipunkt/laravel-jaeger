@@ -2,6 +2,7 @@
 
 use Ipunkt\LaravelJaeger\TagPropagator\TagPropagator;
 use Jaeger\Jaeger;
+use const OpenTracing\Formats\TEXT_MAP;
 use OpenTracing\Reference;
 use OpenTracing\SpanContext;
 
