@@ -80,10 +80,10 @@ class Provider extends ServiceProvider
 
 		// Also listen for queries and log then,
 		// it also receives the log in the MessageLogged event above
-		DB::listen(function ($query, $values) {
+		DB::listen(function ($query) {
 			Log::debug("[DB Query] {$query->connection->getName()}", [
 				'query' => str_replace('"', "'", $query->sql),
-				'values' => $values,
+                'bindings' => $query->bindings,
 				'time' => $query->time . 'ms',
 			]);
 		});
