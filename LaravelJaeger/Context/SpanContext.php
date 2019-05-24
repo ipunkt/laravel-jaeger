@@ -70,7 +70,7 @@ class SpanContext implements Context
         $this->tracer = $config->initTrace(config('app.name'), config('jaeger.host'));
     }
 
-    public function parse($name, $data)
+    public function parse(string $name, array $data)
     {
     	$this->messageSpan = $this->spanExtractor
 		    ->setName($name)

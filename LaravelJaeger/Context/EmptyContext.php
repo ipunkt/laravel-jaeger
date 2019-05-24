@@ -24,6 +24,9 @@ class EmptyContext implements Context
     }
 
 
+    public function log( array $fields ) {
+    }
+
     public function inject(array &$messageData) {
 
         $this->injectGlobaSpanData($messageData);
@@ -43,6 +46,9 @@ class EmptyContext implements Context
         $tracer->inject($span->getContext(), TEXT_MAP, $messageData);
     }
 
-	public function log( array $fields ) {
-	}
+    public function parse(string $name, array $data)
+    {
+    }
+
+
 }

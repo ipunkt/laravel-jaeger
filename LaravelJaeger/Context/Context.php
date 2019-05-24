@@ -16,4 +16,6 @@ interface Context
 
     function inject(array &$messageData);
 
+    function parse(string $name, array $data);
+
 }
