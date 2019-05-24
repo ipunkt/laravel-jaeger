@@ -110,7 +110,7 @@ class Provider extends ServiceProvider
 
     private function disabledInConsole()
     {
-        return config('jaeger.enable-for-console');
+        return !config('jaeger.enable-for-console');
     }
 
 }
