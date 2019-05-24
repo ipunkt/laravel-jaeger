@@ -5,6 +5,7 @@ use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Ipunkt\LaravelJaeger\Context\EmptyContext;
 use Ipunkt\LaravelJaeger\Context\SpanContext;
 use Event;
 use DB;
@@ -25,14 +26,19 @@ class Provider extends ServiceProvider
 
         // Setup a unique ID for each request. This will allow us to find
         // the request trace in the jaeger ui
-        $this->app->instance('context', app(SpanContext::class) );
+        $this->app->instance('context', app(EmptyContext::class) );
     }
 
     public function boot()
     {
+        $this->setupQueryLogging();
+
+        if( app()->runningInConsole() && $this->disabledInConsole() )
+            return;
+
+        $this->app->instance('context', app(SpanContext::class) );
     	app('context')->start();
 
-        $this->setupQueryLogging();
 
 	    $this->registerEvents();
 
@@ -100,6 +106,11 @@ class Provider extends ServiceProvider
         $currentArgs = request()->server('argv');
         $commandLine = implode(' ', $currentArgs);
         app('context')->parse( $commandLine, [] );
+    }
+
+    private function disabledInConsole()
+    {
+        return config('jaeger.enable-for-console');
     }
 
 }
