@@ -3,7 +3,6 @@
 use Ipunkt\LaravelJaeger\Context\TracerBuilder\TracerBuilder;
 use Ipunkt\LaravelJaeger\SpanExtractor\SpanExtractor;
 use Ipunkt\LaravelJaeger\TagPropagator\TagPropagator;
-use Jaeger\Config;
 use Jaeger\Jaeger;
 use OpenTracing\Span;
 use const OpenTracing\Formats\TEXT_MAP;
