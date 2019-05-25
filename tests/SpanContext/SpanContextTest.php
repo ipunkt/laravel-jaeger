@@ -19,7 +19,7 @@ class SpanContextTest extends TestCase {
 	/**
 	 * @var SpanContext
 	 */
-	protected $spanContext;
+	protected $context;
 
 	/**
 	 * @var TracerBuilder|MockInterface
@@ -37,6 +37,11 @@ class SpanContextTest extends TestCase {
 	protected $spanExtractor;
 
 	/**
+	 * @var \OpenTracing\SpanContext|Mockery
+	 */
+	protected $spanContext;
+
+	/**
 	 * @var Jaeger|MockInterface
 	 */
 	protected $tracer;
@@ -51,7 +56,7 @@ class SpanContextTest extends TestCase {
 
 		$this->buildMocks();
 
-		$this->spanContext = new SpanContext($this->tagPropagator, $this->spanExtractor, $this->tracerBuilder);
+		$this->context = new SpanContext($this->tagPropagator, $this->spanExtractor, $this->tracerBuilder);
 	}
 
 
@@ -60,21 +65,34 @@ class SpanContextTest extends TestCase {
 	 */
 	public function startBuildsTracer() {
 		$this->assertTracerIsBuilt();
-		$this->spanContext->start();
+		$this->context->start();
 	}
 
 	/**
 	 * @test
 	 */
 	public function finish() {
-		$this->useGenericTracer();
 
 		$this->assertSpanIsFinished();
 		$this->assertDataIsFlushedToTracer();
 
-		$this->spanContext->start();
-		$this->spanContext->parse('', []);
-		$this->spanContext->finish();
+		$this->setUpContext();
+		$this->context->finish();
+	}
+
+	/**
+	 * @test
+	 */
+	public function injectAddsPropagatedTags(  ) {
+		$this->setUpContext();
+		$this->context->setPropagatedTags([
+			'tag1' => 'value1',
+			'tag2' => 'value2',
+		]);
+
+		$data = [];
+		$this->context->inject($data);
+		$this->arrayHasKey('trace', $data);
 	}
 
 	private function buildMocks() {
@@ -84,8 +102,11 @@ class SpanContextTest extends TestCase {
 		$this->spanExtractor->shouldIgnoreMissing($this->spanExtractor);
 		$this->tracerBuilder = Mockery::mock(TracerBuilder::class);
 		$this->tracer = Mockery::mock(Jaeger::class);
+		$this->tracer->shouldIgnoreMissing($this->tracer);
 		$this->span = Mockery::mock(Span::class);
 		$this->span->shouldIgnoreMissing($this->span);
+		$this->spanContext = Mockery::mock(\OpenTracing\SpanContext::class);
+		$this->span->shouldReceive('getContext')->andReturn($this->spanContext);
 		$this->spanExtractor->shouldReceive('getBuiltSpan')->andReturn($this->span);
 	}
 
@@ -99,6 +120,13 @@ class SpanContextTest extends TestCase {
 
 	private function assertDataIsFlushedToTracer() {
 		$this->tracer->shouldReceive('flush')->once();
+	}
+
+	private function setUpContext() {
+		$this->useGenericTracer();
+
+		$this->context->start();
+		$this->context->parse('', []);
 	}
 
 	private function useGenericTracer() {
