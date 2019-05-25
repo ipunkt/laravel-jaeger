@@ -1,5 +1,6 @@
 <?php namespace Ipunkt\LaravelJaeger\Context;
 
+use Ipunkt\LaravelJaeger\Context\TracerBuilder\TracerBuilder;
 use Ipunkt\LaravelJaeger\SpanExtractor\SpanExtractor;
 use Ipunkt\LaravelJaeger\TagPropagator\TagPropagator;
 use Jaeger\Config;
@@ -38,15 +39,23 @@ class SpanContext implements Context
 	 * @var SpanExtractor
 	 */
 	private $spanExtractor;
+	/**
+	 * @var TracerBuilder
+	 */
+	private $tracerBuilder;
 
 	/**
 	 * MessageContext constructor.
 	 * @param TagPropagator $tagPropagator
 	 * @param SpanExtractor $spanExtractor
+	 * @param TracerBuilder $tracerBuilder
 	 */
-    public function __construct(TagPropagator $tagPropagator, SpanExtractor $spanExtractor) {
+    public function __construct(TagPropagator $tagPropagator,
+                                SpanExtractor $spanExtractor,
+                                TracerBuilder $tracerBuilder) {
         $this->tagPropagator = $tagPropagator;
 	    $this->spanExtractor = $spanExtractor;
+	    $this->tracerBuilder = $tracerBuilder;
     }
 
     public function start()
@@ -62,6 +71,7 @@ class SpanContext implements Context
 
     protected function buildTracer(): void
     {
+    	$this->tracer = $this->tracerBuilder->build();
     }
 
     public function parse(string $name, array $data)
@@ -71,7 +81,8 @@ class SpanContext implements Context
 		    ->setData($data)
 		    ->setTracer($this->tracer)
 		    ->setTagPropagator($this->tagPropagator)
-		    ->extract();
+		    ->extract()
+	        ->getBuiltSpan();
 
         // Set the uuid as a tag for this trace
         $this->uuid = Uuid::uuid1();

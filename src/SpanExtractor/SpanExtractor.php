@@ -4,6 +4,7 @@ use Ipunkt\LaravelJaeger\TagPropagator\TagPropagator;
 use Jaeger\Jaeger;
 use const OpenTracing\Formats\TEXT_MAP;
 use OpenTracing\Reference;
+use OpenTracing\Span;
 use OpenTracing\SpanContext;
 
 /**
@@ -36,13 +37,22 @@ class SpanExtractor {
 	 */
 	protected $tracer;
 
+	/**
+	 * @var Span
+	 */
+	protected $builtSpan;
+
+	/**
+	 * @return $this
+	 */
 	public function extract() {
 		$this->parseContext();
 
 		$this->buildSpanOptions();
 
 		// Start the global span, it'll wrap the request/console lifecycle
-		return $this->tracer->startSpan($this->name, $this->spanOptions);
+		$this->builtSpan = $this->tracer->startSpan($this->name, $this->spanOptions);
+		return $this;
 	}
 
 	private function parseContext() {
@@ -130,6 +140,13 @@ class SpanExtractor {
 	public function setTracer( \Jaeger\Jaeger $tracer ) {
 		$this->tracer =$tracer;
 		return $this;
+	}
+
+	/**
+	 * @return Span
+	 */
+	public function getBuiltSpan(): Span {
+		return $this->builtSpan;
 	}
 
 }
