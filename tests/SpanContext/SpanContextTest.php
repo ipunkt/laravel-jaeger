@@ -1,5 +1,7 @@
 <?php namespace Ipunkt\LaravelJaegerTests\SpanContext;
 
+use Ipunkt\LaravelJaeger\Context\Exceptions\NoSpanException;
+use Ipunkt\LaravelJaeger\Context\Exceptions\NoTracerException;
 use Ipunkt\LaravelJaeger\Context\SpanContext;
 use Ipunkt\LaravelJaeger\Context\TracerBuilder\TracerBuilder;
 use Ipunkt\LaravelJaeger\SpanExtractor\SpanExtractor;
@@ -136,6 +138,38 @@ class SpanContextTest extends TestCase {
 		$this->tracer->shouldReceive('extract')->with(TEXT_MAP, $data)->once();
 		$this->context->start();
 		$this->context->parse('', $data);
+	}
+
+	/**
+	 * @test
+	 */
+	public function parseWithoutStartThrowsNoTracerException() {
+		$this->expectException(NoTracerException::class);
+		$this->context->parse('', []);
+	}
+
+	/**
+	 * @test
+	 */
+	public function injectWithoutStartThrowsNoTracerException() {
+		$data = [];
+
+		$this->expectException(NoTracerException::class);
+
+		$this->context->inject($data);
+	}
+
+	/**
+	 * @test
+	 */
+	public function injectWithoutParseThrowsNoSpanException(  ) {
+		$this->useGenericTracer();
+
+		$this->context->start();
+		$this->expectException(NoSpanException::class);
+
+		$data = [];
+		$this->context->inject($data);
 	}
 
 	private function buildMocks() {

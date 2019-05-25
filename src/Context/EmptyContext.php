@@ -1,9 +1,5 @@
 <?php namespace Ipunkt\LaravelJaeger\Context;
 
-use Jaeger\Jaeger;
-use const OpenTracing\Formats\TEXT_MAP;
-use OpenTracing\Span;
-
 /**
  * Class EmptyContext
  */

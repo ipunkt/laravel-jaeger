@@ -16,6 +16,12 @@
     <filter>
         <whitelist>
             <directory>./src/</directory>
+
+            <exclude>
+                <file>./src/Context/Context.php</file>
+                <file>./src/Context/EmptyContext.php</file>
+                <file>./src/Provider.php</file>
+            </exclude>
         </whitelist>
     </filter>
     <testsuites>

@@ -1,11 +1,14 @@
 <?php namespace Ipunkt\LaravelJaeger\Context;
 
+use Ipunkt\LaravelJaeger\Context\Exceptions\NoSpanException;
+use Ipunkt\LaravelJaeger\Context\Exceptions\NoTracerException;
 use Ipunkt\LaravelJaeger\Context\TracerBuilder\TracerBuilder;
 use Ipunkt\LaravelJaeger\SpanExtractor\SpanExtractor;
 use Ipunkt\LaravelJaeger\TagPropagator\TagPropagator;
 use Jaeger\Jaeger;
 use OpenTracing\Span;
 use const OpenTracing\Formats\TEXT_MAP;
+use OpenTracing\Tracer;
 use Ramsey\Uuid\Uuid;
 use Ramsey\Uuid\UuidInterface;
 
@@ -75,6 +78,8 @@ class SpanContext implements Context
 
     public function parse(string $name, array $data)
     {
+    	$this->assertHasTracer();
+
     	$this->messageSpan = $this->spanExtractor
 		    ->setName($name)
 		    ->setData($data)
@@ -109,6 +114,9 @@ class SpanContext implements Context
      */
     public function inject(array &$messageData)
     {
+    	$this->assertHasTracer();
+    	$this->assertHasSpan();
+
         $context = $this->messageSpan->getContext();
 
         $this->tracer->inject($context, TEXT_MAP, $messageData);
@@ -118,5 +126,19 @@ class SpanContext implements Context
 
 	public function log( array $fields ) {
     	$this->messageSpan->log($fields);
+	}
+
+	private function assertHasTracer() {
+    	if($this->tracer instanceof Tracer)
+    		return;
+
+    	throw new NoTracerException();
+	}
+
+	private function assertHasSpan() {
+    	if($this->messageSpan instanceof Span)
+    		return;
+
+    	throw new NoSpanException();
 	}
 }
