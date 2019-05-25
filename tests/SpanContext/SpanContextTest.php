@@ -51,7 +51,7 @@ class SpanContextTest extends TestCase {
 
 		$this->buildMocks();
 
-		$this->context = new SpanContext(new TagPropagator(), $this->spanExtractor, $this->tracerBuilder);
+		$this->context = new SpanContext(new TagPropagator(), new SpanExtractor(), $this->tracerBuilder);
 	}
 
 
@@ -94,6 +94,26 @@ class SpanContextTest extends TestCase {
 		$this->assertEquals('value2', $data['propagated-tags']['tag2']);
 	}
 
+	/**
+	 * @test
+	 */
+	public function extractAddsPropagatedTags() {
+		$data = [
+			'propagated-tags' => [
+				'tag1' => 'value1',
+				'tag2' => 'value2',
+			]
+		];
+		$this->useGenericTracer();
+
+		$this->context->start();
+		$this->span->shouldReceive('setTags')->with([
+			'tag1' => 'value1',
+			'tag2' => 'value2',
+		])->once();
+		$this->context->parse('', $data);
+	}
+
 	private function buildMocks() {
 		$this->spanExtractor = Mockery::mock(SpanExtractor::class);
 		$this->spanExtractor->shouldIgnoreMissing($this->spanExtractor);
@@ -105,6 +125,7 @@ class SpanContextTest extends TestCase {
 		$this->spanContext = Mockery::mock(\OpenTracing\SpanContext::class);
 		$this->span->shouldReceive('getContext')->andReturn($this->spanContext);
 		$this->spanExtractor->shouldReceive('getBuiltSpan')->andReturn($this->span);
+		$this->tracer->shouldReceive('startSpan')->andReturn($this->span);
 	}
 
 	private function assertTracerIsBuilt() {

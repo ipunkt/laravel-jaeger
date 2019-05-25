@@ -69,10 +69,7 @@ class SpanExtractor {
 
 	private function extractContextFromData()
 	{
-		if( !array_key_exists('trace', $this->data) )
-			return;
-
-		$this->traceContent = $this->data['trace'];
+		$this->traceContent = $this->data;
 
 		$this->extractSpanContext();
 
