@@ -162,6 +162,48 @@ class SpanContextTest extends TestCase {
 	/**
 	 * @test
 	 */
+	public function setPropagatedTagsAddsTagsToSpan(  ) {
+		$this->setUpContext();
+
+		$this->span->shouldReceive('setTags')->once()->with([
+			'a' => 'b'
+		]);
+		$this->context->setPropagatedTags([
+			'a' => 'b'
+		]);
+	}
+
+	/**
+	 * @test
+	 */
+	public function setPrivateTagsAddsTagsToSpan(  ) {
+		$this->setUpContext();
+
+		$this->span->shouldReceive('setTags')->once()->with([
+			'a' => 'b'
+		]);
+		$this->context->setPropagatedTags([
+			'a' => 'b'
+		]);
+	}
+
+	/**
+	 * @test
+	 */
+	public function logLogsToSpan(  ) {
+		$this->setUpContext();
+
+		$this->span->shouldReceive('log')->once()->with([
+			'a' => 'b'
+		]);
+		$this->context->log([
+			'a' => 'b'
+		]);
+	}
+
+	/**
+	 * @test
+	 */
 	public function injectWithoutParseThrowsNoSpanException(  ) {
 		$this->useGenericTracer();
 
