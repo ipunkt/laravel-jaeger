@@ -27,11 +27,6 @@ class SpanContextTest extends TestCase {
 	protected $tracerBuilder;
 
 	/**
-	 * @var TagPropagator|MockInterface
-	 */
-	protected $tagPropagator;
-
-	/**
 	 * @var SpanExtractor|MockInterface
 	 */
 	protected $spanExtractor;
@@ -56,7 +51,7 @@ class SpanContextTest extends TestCase {
 
 		$this->buildMocks();
 
-		$this->context = new SpanContext($this->tagPropagator, $this->spanExtractor, $this->tracerBuilder);
+		$this->context = new SpanContext(new TagPropagator(), $this->spanExtractor, $this->tracerBuilder);
 	}
 
 
@@ -92,12 +87,14 @@ class SpanContextTest extends TestCase {
 
 		$data = [];
 		$this->context->inject($data);
-		$this->arrayHasKey('trace', $data);
+		$this->assertArrayHasKey('propagated-tags', $data);
+		$this->assertArrayHasKey('tag1', $data['propagated-tags']);
+		$this->assertArrayHasKey('tag2', $data['propagated-tags']);
+		$this->assertEquals('value1', $data['propagated-tags']['tag1']);
+		$this->assertEquals('value2', $data['propagated-tags']['tag2']);
 	}
 
 	private function buildMocks() {
-		$this->tagPropagator = Mockery::mock(TagPropagator::class);
-		$this->tagPropagator->shouldIgnoreMissing($this->tagPropagator);
 		$this->spanExtractor = Mockery::mock(SpanExtractor::class);
 		$this->spanExtractor->shouldIgnoreMissing($this->spanExtractor);
 		$this->tracerBuilder = Mockery::mock(TracerBuilder::class);
