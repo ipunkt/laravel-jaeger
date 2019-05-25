@@ -62,12 +62,6 @@ class SpanContext implements Context
 
     protected function buildTracer(): void
     {
-        $config = Config::getInstance();
-
-        $config->gen128bit();
-
-        // Start the tracer with a service name and the jaeger address
-        $this->tracer = $config->initTrace(config('app.name'), config('jaeger.host'));
     }
 
     public function parse(string $name, array $data)

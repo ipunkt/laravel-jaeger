@@ -9,6 +9,8 @@ use Ipunkt\LaravelJaeger\Context\EmptyContext;
 use Ipunkt\LaravelJaeger\Context\SpanContext;
 use Event;
 use DB;
+use Ipunkt\LaravelJaeger\Context\TracerBuilder\TracerBuilder;
+use Jaeger\Config;
 use Log;
 
 /**
@@ -23,6 +25,19 @@ class Provider extends ServiceProvider
         $this->publishes([
             __DIR__.'/config/jaeger.php' => config_path('jaeger.php'),
         ]);
+
+        $this->app->singleton(Config::class, function() {
+        	$config = Config::getInstance();
+        	$config->gen128bit();
+	        return $config;
+        });
+
+        $this->app->resolving(TracerBuilder::class, function(TracerBuilder $tracerBuilder) {
+        	$tracerBuilder
+		        ->setName(config('app.name'))
+		        ->setJaegerHost(config('jaeger.host'));
+        	return $tracerBuilder;
+        });
 
         // Setup a unique ID for each request. This will allow us to find
         // the request trace in the jaeger ui
