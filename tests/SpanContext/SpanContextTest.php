@@ -9,6 +9,7 @@ use Jaeger\Jaeger;
 use Jaeger\Span;
 use Mockery;
 use Mockery\MockInterface;
+use const OpenTracing\Formats\TEXT_MAP;
 
 /**
  * Class SpanContextTest
@@ -97,7 +98,18 @@ class SpanContextTest extends TestCase {
 	/**
 	 * @test
 	 */
-	public function extractAddsPropagatedTags() {
+	public function injectAddsSpanInject() {
+		$data = [];
+		$this->setUpContext();
+
+		$this->tracer->shouldReceive('inject')->once()->with($this->spanContext, TEXT_MAP, $data);
+		$this->context->inject($data);
+	}
+
+	/**
+	 * @test
+	 */
+	public function parseExtractsPropagatedTags() {
 		$data = [
 			'propagated-tags' => [
 				'tag1' => 'value1',
@@ -111,6 +123,18 @@ class SpanContextTest extends TestCase {
 			'tag1' => 'value1',
 			'tag2' => 'value2',
 		])->once();
+		$this->context->parse('', $data);
+	}
+
+	/**
+	 * @test
+	 */
+	public function parseExtractsSpanContext() {
+		$data = ['test'];
+		$this->useGenericTracer();
+
+		$this->tracer->shouldReceive('extract')->with(TEXT_MAP, $data)->once();
+		$this->context->start();
 		$this->context->parse('', $data);
 	}
 
