@@ -78,7 +78,11 @@ class SpanExtractor {
 
 	private function extractSpanContext()
 	{
-		$this->spanContext = $this->tracer->extract(TEXT_MAP, $this->traceContent);
+	    $filteredTraceContent = array_filter($this->traceContent, function($v) {
+	        return is_string($v);
+        });
+
+		$this->spanContext = $this->tracer->extract(TEXT_MAP, $filteredTraceContent);
 	}
 
 	private function extractPropagatedTags()
