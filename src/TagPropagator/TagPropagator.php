@@ -54,7 +54,8 @@ class TagPropagator
 
     public function apply(Span $span)
     {
-        $span->setTags($this->propagatedTags);
+        foreach ($this->propagatedTags as $name => $value)
+            $span->setTag($name, $value);
     }
 
 }
