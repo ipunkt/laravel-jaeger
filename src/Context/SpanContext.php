@@ -99,14 +99,16 @@ class SpanContext implements Context
 
     public function setPrivateTags(array $tags)
     {
-        $this->messageSpan->setTags($tags);
+        foreach($tags as $name => $value)
+            $this->messageSpan->setTag($name, $value);
     }
 
     public function setPropagatedTags(array $tags)
     {
         $this->tagPropagator->addTags($tags);
 
-        $this->messageSpan->setTags($tags);
+        foreach($tags as $name => $value)
+            $this->messageSpan->setTag($name, $value);
     }
 
     /**
