@@ -3,6 +3,7 @@
 use Ipunkt\LaravelJaeger\Context\Exceptions\NoSpanException;
 use Ipunkt\LaravelJaeger\Context\Exceptions\NoTracerException;
 use Ipunkt\LaravelJaeger\Context\TracerBuilder\TracerBuilder;
+use Ipunkt\LaravelJaeger\LogCleaner\LogCleaner;
 use Ipunkt\LaravelJaeger\SpanExtractor\SpanExtractor;
 use Ipunkt\LaravelJaeger\TagPropagator\TagPropagator;
 use Jaeger\Jaeger;
@@ -45,19 +46,26 @@ class SpanContext implements Context
 	 * @var TracerBuilder
 	 */
 	private $tracerBuilder;
+	/**
+	 * @var LogCleaner
+	 */
+	private $logCleaner;
 
 	/**
 	 * MessageContext constructor.
 	 * @param TagPropagator $tagPropagator
 	 * @param SpanExtractor $spanExtractor
 	 * @param TracerBuilder $tracerBuilder
+	 * @param LogCleaner $logCleaner
 	 */
     public function __construct(TagPropagator $tagPropagator,
                                 SpanExtractor $spanExtractor,
-                                TracerBuilder $tracerBuilder) {
+                                TracerBuilder $tracerBuilder,
+								LogCleaner $logCleaner) {
         $this->tagPropagator = $tagPropagator;
 	    $this->spanExtractor = $spanExtractor;
 	    $this->tracerBuilder = $tracerBuilder;
+	    $this->logCleaner = $logCleaner;
     }
 
     public function start()
@@ -125,7 +133,8 @@ class SpanContext implements Context
     }
 
 	public function log( array $fields ) {
-    	$this->messageSpan->log($fields);
+    	$this->logCleaner->setLogs($fields)->clean();
+    	$this->messageSpan->log($this->logCleaner->getLogs());
 	}
 
 	private function assertHasTracer() {

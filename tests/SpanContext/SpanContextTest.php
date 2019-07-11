@@ -4,6 +4,7 @@ use Ipunkt\LaravelJaeger\Context\Exceptions\NoSpanException;
 use Ipunkt\LaravelJaeger\Context\Exceptions\NoTracerException;
 use Ipunkt\LaravelJaeger\Context\SpanContext;
 use Ipunkt\LaravelJaeger\Context\TracerBuilder\TracerBuilder;
+use Ipunkt\LaravelJaeger\LogCleaner\LogCleaner;
 use Ipunkt\LaravelJaeger\SpanExtractor\SpanExtractor;
 use Ipunkt\LaravelJaeger\TagPropagator\TagPropagator;
 use Ipunkt\LaravelJaegerTests\TestCase;
@@ -49,12 +50,18 @@ class SpanContextTest extends TestCase {
 	 */
 	protected $span;
 
+	/**
+	 * @var LogCleaner
+	 */
+	protected $logCleaner;
+
 	public function setUp(): void {
 		parent::setUp();
 
 		$this->buildMocks();
 
-		$this->context = new SpanContext(new TagPropagator(), new SpanExtractor(), $this->tracerBuilder);
+		$this->logCleaner = new LogCleaner();
+		$this->context = new SpanContext(new TagPropagator(), new SpanExtractor(), $this->tracerBuilder, $this->logCleaner);
 	}
 
 
@@ -214,6 +221,22 @@ class SpanContextTest extends TestCase {
 		$this->context->inject($data);
 	}
 
+	/**
+	 * @test
+	 */
+	public function cleansLogs() {
+		$this->setUpContext();
+
+		$fields = [
+			'message' => '1234567890'
+		];
+		$this->logCleaner->setMaxLength(5)->setCutoffIndicator('...');
+		$this->span->shouldReceive('log')->once()->with([
+			'message' => '12345...'
+		]);
+		$this->context->log($fields);
+	}
+
 	private function buildMocks() {
 		$this->spanExtractor = Mockery::mock(SpanExtractor::class);
 		$this->spanExtractor->shouldIgnoreMissing($this->spanExtractor);
@@ -249,6 +272,9 @@ class SpanContextTest extends TestCase {
 
 	private function useGenericTracer() {
 		$this->tracerBuilder->shouldReceive('build')->andReturn($this->tracer);
+	}
+
+	private function expectLogCleanerCalled( array $fields ) {
 	}
 
 

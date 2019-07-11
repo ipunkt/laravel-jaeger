@@ -10,6 +10,7 @@ use Ipunkt\LaravelJaeger\Context\SpanContext;
 use Event;
 use DB;
 use Ipunkt\LaravelJaeger\Context\TracerBuilder\TracerBuilder;
+use Ipunkt\LaravelJaeger\LogCleaner\LogCleaner;
 use Jaeger\Config;
 use Log;
 
@@ -26,20 +27,13 @@ class Provider extends ServiceProvider
             __DIR__.'/config/jaeger.php' => config_path('jaeger.php'),
         ]);
 
-        $this->app->singleton(Config::class, function() {
-        	$config = Config::getInstance();
-        	$config->gen128bit();
-	        return $config;
-        });
+        $this->mergeConfigFrom(__DIR__.'/config/jaeger.php', 'jaeger');
+	    $this->registerConfig();
 
-        $this->app->resolving(TracerBuilder::class, function(TracerBuilder $tracerBuilder) {
-        	$tracerBuilder
-		        ->setName(config('app.name'))
-		        ->setJaegerHost(config('jaeger.host'));
-        	return $tracerBuilder;
-        });
+	    $this->registerSettingTracerBuilderConfig();
+	    $this->registerSettingLogCleanerConfig();
 
-        // Setup a unique ID for each request. This will allow us to find
+	    // Setup a unique ID for each request. This will allow us to find
         // the request trace in the jaeger ui
         $this->app->instance('context', app(EmptyContext::class) );
     }
@@ -127,5 +121,29 @@ class Provider extends ServiceProvider
     {
         return !config('jaeger.enable-for-console');
     }
+
+	private function registerSettingTracerBuilderConfig(): void {
+		$this->app->resolving( TracerBuilder::class, function ( TracerBuilder $tracerBuilder ) {
+			$tracerBuilder
+				->setName( config( 'app.name' ) )
+				->setJaegerHost( config( 'jaeger.host' ) );
+			return $tracerBuilder;
+		} );
+	}
+
+	private function registerConfig(): void {
+		$this->app->singleton( Config::class, function () {
+			$config = Config::getInstance();
+			$config->gen128bit();
+			return $config;
+		} );
+	}
+
+	private function registerSettingLogCleanerConfig() {
+    	$this->app->resolving(LogCleaner::class, function(LogCleaner $logCleaner) {
+    		$logCleaner->setMaxLength( config('jaeger.log.max-string-length') );
+		    $logCleaner->setCutoffIndicator( config('jaeger.log.cutoff-indicator') );
+	    });
+	}
 
 }

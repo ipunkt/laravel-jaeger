@@ -1,5 +1,9 @@
 <?php
 return [
+	'log' => [
+		'max-string-length' => 300,
+		'cutoff-indicator' => '...'
+	],
 
     'host' => env('JAEGER_AGENT_HOST', 'jaeger').':'.env('JAEGER_AGENT_PORT', 6831),
 
