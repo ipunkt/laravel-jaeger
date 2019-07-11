@@ -9,6 +9,7 @@ use Illuminate\Support\Str;
 use Ipunkt\LaravelJaeger\Context\EmptyContext;
 use Ipunkt\LaravelJaeger\Context\SpanContext;
 use Ipunkt\LaravelJaeger\Context\TracerBuilder\TracerBuilder;
+use Ipunkt\LaravelJaeger\LogCleaner\LogCleaner;
 use Jaeger\Config;
 use Log;
 
@@ -39,6 +40,12 @@ class Provider extends ServiceProvider
                 ->setName(config('app.name'))
                 ->setJaegerHost(config('jaeger.host'));
             return $tracerBuilder;
+        });
+
+        $this->app->resolving(LogCleaner::class, function (LogCleaner $logCleaner) {
+            $logCleaner
+                ->setMaxLength(config('jaeger.log.max-string-length'))
+                ->setCutoffIndicator(config('jaeger.log.cutoff-indicator'));
         });
 
         // Setup a unique ID for each request. This will allow us to find
