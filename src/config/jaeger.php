@@ -5,7 +5,7 @@ return [
 		'cutoff-indicator' => '...'
 	],
 
-    'host' => env('JAEGER_AGENT_HOST', 'jaeger').':'.env('JAEGER_AGENT_PORT', 6831),
+    'host' => env('JAEGER_AGENT_HOST', 'localhost').':'.env('JAEGER_AGENT_PORT', 6831),
 
-    'enable-for-console' => env('JAEGER_ENABLE_FOR_CONSOLE', true),
+    'enable-for-console' => env('JAEGER_ENABLE_FOR_CONSOLE', false),
 ];

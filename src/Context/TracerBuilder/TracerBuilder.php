@@ -32,7 +32,7 @@ class TracerBuilder {
 
 	public function build() {
 		// Start the tracer with a service name and the jaeger address
-		return $this->config->initTrace($this->name, $this->jaegerHost);
+		return $this->config->initTracer($this->name, $this->jaegerHost);
 	}
 
 	/**
