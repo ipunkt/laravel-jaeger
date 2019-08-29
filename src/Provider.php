@@ -2,6 +2,7 @@
 
 use DB;
 use Event;
+use function foo\func;
 use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\ServiceProvider;
@@ -11,6 +12,15 @@ use Ipunkt\LaravelJaeger\Context\SpanContext;
 use Ipunkt\LaravelJaeger\Context\TracerBuilder\TracerBuilder;
 use Ipunkt\LaravelJaeger\LogCleaner\LogCleaner;
 use Jaeger\Config;
+use Jaeger\Id\IdGeneratorInterface;
+use Jaeger\Id\RandomIntGenerator;
+use Jaeger\Sampler\AdaptiveSampler;
+use Jaeger\Sampler\OperationGenerator;
+use Jaeger\Sampler\ProbabilisticSampler;
+use Jaeger\Sampler\RateLimitingSampler;
+use Jaeger\Sampler\SamplerInterface;
+use Jaeger\Span\Factory\SpanFactory;
+use Jaeger\Span\Factory\SpanFactoryInterface;
 use Log;
 
 /**
@@ -29,11 +39,22 @@ class Provider extends ServiceProvider
             __DIR__ . '/config/jaeger.php' => config_path('jaeger.php'),
         ]);
 
-        $this->app->singleton(Config::class, function () {
-            $config = Config::getInstance();
-            $config->gen128bit();
-            return $config;
+
+        $this->app->bind(SpanFactoryInterface::class, SpanFactory::class);
+        $this->app->bind(IdGeneratorInterface::class, RandomIntGenerator::class);
+        $this->app->bind(RateLimitingSampler::class, function () {
+            return new RateLimitingSampler(config('jaeger.sampler-param'), app(OperationGenerator::class));
         });
+        $this->app->bind(ProbabilisticSampler::class, function() {
+            return new ProbabilisticSampler( config('jaeger.sampler-param') );
+        });
+        switch( config('jaeger.sampler') ) {
+            default:
+                $this->app->bind(SamplerInterface::class, function() {
+                    return new AdaptiveSampler(app(RateLimitingSampler::class), app(ProbabilisticSampler::class));
+                } );
+                break;
+        }
 
         $this->app->resolving(TracerBuilder::class, function (TracerBuilder $tracerBuilder) {
             $tracerBuilder
