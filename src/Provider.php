@@ -2,26 +2,29 @@
 
 use DB;
 use Event;
-use function foo\func;
 use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Log\Events\MessageLogged;
+use Illuminate\Support\Arr;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Ipunkt\LaravelJaeger\Context\EmptyContext;
 use Ipunkt\LaravelJaeger\Context\SpanContext;
-use Ipunkt\LaravelJaeger\Context\TracerBuilder\TracerBuilder;
 use Ipunkt\LaravelJaeger\LogCleaner\LogCleaner;
-use Jaeger\Config;
+use Jaeger\Client\ThriftClient;
 use Jaeger\Id\IdGeneratorInterface;
 use Jaeger\Id\RandomIntGenerator;
 use Jaeger\Sampler\AdaptiveSampler;
+use Jaeger\Sampler\ConstSampler;
 use Jaeger\Sampler\OperationGenerator;
 use Jaeger\Sampler\ProbabilisticSampler;
 use Jaeger\Sampler\RateLimitingSampler;
 use Jaeger\Sampler\SamplerInterface;
 use Jaeger\Span\Factory\SpanFactory;
 use Jaeger\Span\Factory\SpanFactoryInterface;
+use Jaeger\Thrift\Agent\AgentClient;
+use Jaeger\Transport\TUDPTransport;
 use Log;
+use Thrift\Protocol\TCompactProtocol;
 
 /**
  * Class Provider
@@ -40,27 +43,39 @@ class Provider extends ServiceProvider
         ]);
 
 
+        $this->app->bind('jaeger-host', function() {
+            $hostPort = explode(':', config('jaeger.host'));
+            $host = $hostPort[0];
+            if( empty($host) )
+                return '127.0.0.1';
+
+            return $host;
+        });
+
+        $this->app->bind('jaeger-port', function() {
+            $hostPort = explode(':', config('jaeger.host'));
+
+            return Arr::get($hostPort, 1, 6831);
+        });
+
         $this->app->bind(SpanFactoryInterface::class, SpanFactory::class);
         $this->app->bind(IdGeneratorInterface::class, RandomIntGenerator::class);
-        $this->app->bind(RateLimitingSampler::class, function () {
-            return new RateLimitingSampler(config('jaeger.sampler-param'), app(OperationGenerator::class));
-        });
-        $this->app->bind(ProbabilisticSampler::class, function() {
-            return new ProbabilisticSampler( config('jaeger.sampler-param') );
-        });
-        switch( config('jaeger.sampler') ) {
-            default:
-                $this->app->bind(SamplerInterface::class, function() {
-                    return new AdaptiveSampler(app(RateLimitingSampler::class), app(ProbabilisticSampler::class));
-                } );
-                break;
-        }
+        $this->bindSamplers();
+        $this->chooseSampler();
 
-        $this->app->resolving(TracerBuilder::class, function (TracerBuilder $tracerBuilder) {
-            $tracerBuilder
-                ->setName(config('app.name'))
-                ->setJaegerHost(config('jaeger.host'));
-            return $tracerBuilder;
+        $this->app->bind(TCompactProtocol::class, function() {
+            return new TCompactProtocol(app('jaeger-transport'));
+        });
+        $this->app->bind(TUDPTransport::class, function() {
+            return new TUDPTransport(app('jaeger-host'), app('jaeger-port'));
+        });
+        $this->app->bind('jaeger-protocol', TCompactProtocol::class);
+        $this->app->bind('jaeger-transport', TUDPTransport::class);
+        $this->app->bind(AgentClient::class, function() {
+            return new AgentClient( app('jaeger-protocol') );
+        });
+        $this->app->bind(ThriftClient::class, function() {
+            return new ThriftClient( config('app.name'), app(AgentClient::class) );
         });
 
         $this->app->resolving(LogCleaner::class, function (LogCleaner $logCleaner) {
@@ -160,5 +175,40 @@ class Provider extends ServiceProvider
     private function disabledInConsole()
     {
         return !config('jaeger.enable-for-console');
+    }
+
+    private function bindSamplers(): void
+    {
+        $this->app->bind(RateLimitingSampler::class, function () {
+            return new RateLimitingSampler(config('jaeger.sampler-param'), app(OperationGenerator::class));
+        });
+        $this->app->bind(ProbabilisticSampler::class, function () {
+            return new ProbabilisticSampler(config('jaeger.sampler-param'));
+        });
+        $this->app->bind(AdaptiveSampler::class, function() {
+            return new AdaptiveSampler(app(RateLimitingSampler::class), app(ProbabilisticSampler::class));
+        });
+        $this->app->bind(ConstSampler::class, function() {
+            return new ConstSampler(true);
+        });
+    }
+
+    private function chooseSampler(): void
+    {
+        switch (config('jaeger.sampler')) {
+            case 'probabilistic':
+                $this->app->bind(SamplerInterface::class, ProbabilisticSampler::class);
+                break;
+            case 'rate-limiting':
+                $this->app->bind(SamplerInterface::class, RateLimitingSampler::class);
+                break;
+            case 'adaptive':
+                $this->app->bind(SamplerInterface::class, AdaptiveSampler::class);
+                break;
+            case 'const':
+            default:
+                $this->app->bind(SamplerInterface::class, ConstSampler::class);
+                break;
+        }
     }
 }
