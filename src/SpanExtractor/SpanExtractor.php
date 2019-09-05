@@ -1,6 +1,8 @@
 <?php namespace Ipunkt\LaravelJaeger\SpanExtractor;
 
+use Ipunkt\LaravelJaeger\Context\ContextArrayConverter\ContextArrayConverter;
 use Ipunkt\LaravelJaeger\TagPropagator\TagPropagator;
+use Jaeger\Span\Context\SpanContext;
 use Jaeger\Span\SpanInterface;
 use Jaeger\Tracer\Tracer;
 
@@ -35,9 +37,18 @@ class SpanExtractor {
 	protected $builtSpan;
 
     /**
-     * @var array
+     * @var SpanContext
      */
     private $spanContext;
+
+    /**
+     * @var ContextArrayConverter
+     */
+    protected $converter;
+
+    public function __construct( ContextArrayConverter $converter ) {
+        $this->converter = $converter;
+    }
 
     /**
 	 * @return $this
@@ -48,7 +59,7 @@ class SpanExtractor {
 		$this->buildSpanOptions();
 
 		// Start the global span, it'll wrap the request/console lifecycle
-		$this->builtSpan = $this->tracer->start($this->name, [], $this->spanOptions);
+		$this->builtSpan = $this->tracer->start($this->name, [], $this->spanContext);
 		return $this;
 	}
 
@@ -75,11 +86,6 @@ class SpanExtractor {
 
 	private function extractSpanContext()
 	{
-	    $filteredTraceContent = array_filter($this->traceContent, function($v) {
-	        return is_string($v);
-        });
-
-		$this->spanContext = $this->tracer->extract(TEXT_MAP, $filteredTraceContent);
 	}
 
 	private function extractPropagatedTags()

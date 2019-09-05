@@ -7,6 +7,7 @@ use Ipunkt\LaravelJaeger\LogCleaner\LogCleaner;
 use Ipunkt\LaravelJaeger\SpanExtractor\SpanExtractor;
 use Ipunkt\LaravelJaeger\TagPropagator\TagPropagator;
 use Jaeger\Log\UserLog;
+use Jaeger\Span\Span;
 use Jaeger\Span\SpanInterface;
 use Jaeger\Tag\StringTag;
 use Jaeger\Tracer\Tracer;
@@ -25,7 +26,7 @@ class SpanContext implements Context
     protected $tracer;
 
     /**
-     * @var SpanInterface
+     * @var Span
      */
     protected $messageSpan;
 
@@ -128,7 +129,7 @@ class SpanContext implements Context
 
         $context = $this->messageSpan->getContext();
 
-        $this->tracer->inject($context, TEXT_MAP, $messageData);
+        Arr::set($messageData);
 
         $this->tagPropagator->inject($messageData);
     }
