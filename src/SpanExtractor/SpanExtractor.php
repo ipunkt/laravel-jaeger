@@ -1,11 +1,8 @@
 <?php namespace Ipunkt\LaravelJaeger\SpanExtractor;
 
 use Ipunkt\LaravelJaeger\TagPropagator\TagPropagator;
-use Jaeger\Jaeger;
-use const OpenTracing\Formats\TEXT_MAP;
-use OpenTracing\Reference;
-use OpenTracing\Span;
-use OpenTracing\SpanContext;
+use Jaeger\Span\SpanInterface;
+use Jaeger\Tracer\Tracer;
 
 /**
  * Class SpanExtractor
@@ -28,21 +25,21 @@ class SpanExtractor {
 	protected $traceContent;
 
 	/**
-	 * @var \OpenTracing\SpanContext
-	 */
-	protected $spanContext;
-
-	/**
-	 * @var Jaeger
+	 * @var Tracer
 	 */
 	protected $tracer;
 
 	/**
-	 * @var Span
+	 * @var SpanInterface
 	 */
 	protected $builtSpan;
 
-	/**
+    /**
+     * @var array
+     */
+    private $spanContext;
+
+    /**
 	 * @return $this
 	 */
 	public function extract() {
@@ -51,7 +48,7 @@ class SpanExtractor {
 		$this->buildSpanOptions();
 
 		// Start the global span, it'll wrap the request/console lifecycle
-		$this->builtSpan = $this->tracer->startSpan($this->name, $this->spanOptions);
+		$this->builtSpan = $this->tracer->start($this->name, [], $this->spanOptions);
 		return $this;
 	}
 
@@ -104,7 +101,7 @@ class SpanExtractor {
 
 	private function addChildOfSpanOption()
 	{
-		$spanContextSet = ($this->spanContext instanceof SpanContext);
+		$spanContextSet = ($this->spanContext instanceof SpanInterface);
 		if( !$spanContextSet )
 			return;
 
@@ -138,15 +135,12 @@ class SpanExtractor {
 		return $this;
 	}
 
-	public function setTracer( \Jaeger\Jaeger $tracer ) {
+	public function setTracer( Tracer $tracer ) {
 		$this->tracer =$tracer;
 		return $this;
 	}
 
-	/**
-	 * @return Span
-	 */
-	public function getBuiltSpan(): Span {
+	public function getBuiltSpan(): SpanInterface {
 		return $this->builtSpan;
 	}
 

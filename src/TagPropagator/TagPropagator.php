@@ -1,6 +1,7 @@
 <?php namespace Ipunkt\LaravelJaeger\TagPropagator;
 
-use OpenTracing\Span;
+use Jaeger\Span\SpanInterface;
+use Jaeger\Tag\StringTag;
 
 /**
  * Class TagPropagator
@@ -52,10 +53,10 @@ class TagPropagator
         $data[$this->dataCarrierKey] = $this->propagatedTags;
     }
 
-    public function apply(Span $span)
+    public function apply(SpanInterface $span)
     {
         foreach ($this->propagatedTags as $name => $value)
-            $span->setTag($name, $value);
+            $span->addTag( new StringTag($name, $value) );
     }
 
 }

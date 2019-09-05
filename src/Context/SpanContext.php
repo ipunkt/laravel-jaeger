@@ -6,10 +6,10 @@ use Ipunkt\LaravelJaeger\Context\TracerBuilder\TracerBuilder;
 use Ipunkt\LaravelJaeger\LogCleaner\LogCleaner;
 use Ipunkt\LaravelJaeger\SpanExtractor\SpanExtractor;
 use Ipunkt\LaravelJaeger\TagPropagator\TagPropagator;
-use Jaeger\Jaeger;
-use OpenTracing\Span;
-use const OpenTracing\Formats\TEXT_MAP;
-use OpenTracing\Tracer;
+use Jaeger\Log\UserLog;
+use Jaeger\Span\SpanInterface;
+use Jaeger\Tag\StringTag;
+use Jaeger\Tracer\Tracer;
 use Ramsey\Uuid\Uuid;
 use Ramsey\Uuid\UuidInterface;
 
@@ -20,12 +20,12 @@ class SpanContext implements Context
 {
 
     /**
-     * @var Jaeger
+     * @var Tracer
      */
     protected $tracer;
 
     /**
-     * @var Span
+     * @var SpanInterface
      */
     protected $messageSpan;
 
@@ -75,7 +75,7 @@ class SpanContext implements Context
 
     public function finish()
     {
-        $this->messageSpan->finish();
+        $this->tracer->finish($this->messageSpan);
         $this->tracer->flush();
     }
 
@@ -108,15 +108,14 @@ class SpanContext implements Context
     public function setPrivateTags(array $tags)
     {
         foreach($tags as $name => $value)
-            $this->messageSpan->setTag($name, $value);
+            $this->messageSpan->addTag( new StringTag($name, $value) );
     }
 
     public function setPropagatedTags(array $tags)
     {
         $this->tagPropagator->addTags($tags);
 
-        foreach($tags as $name => $value)
-            $this->messageSpan->setTag($name, $value);
+        $this->setPrivateTags($tags);
     }
 
     /**
@@ -136,7 +135,8 @@ class SpanContext implements Context
 
 	public function log( array $fields ) {
     	$this->logCleaner->setLogs($fields)->clean();
-    	$this->messageSpan->log($this->logCleaner->getLogs());
+    	foreach($this->logCleaner->getLogs() as $logKey => $logValue)
+            $this->messageSpan->addLog(new UserLog($logKey, 'info', $logValue));
 	}
 
 	private function assertHasTracer() {
@@ -147,7 +147,7 @@ class SpanContext implements Context
 	}
 
 	private function assertHasSpan() {
-    	if($this->messageSpan instanceof Span)
+    	if($this->messageSpan instanceof SpanInterface)
     		return;
 
     	throw new NoSpanException();
