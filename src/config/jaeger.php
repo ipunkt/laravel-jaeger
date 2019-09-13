@@ -12,7 +12,7 @@ return [
     /**
      * possible values:
      */
-    'sampler' => env('JAEGER_SAMPLER', 'adaptive'),
+    'sampler' => env('JAEGER_SAMPLER', 'const'),
 
     'sampler-param' => env('JAEGER_SAMPLER_PARAM', '0.001'),
 ];

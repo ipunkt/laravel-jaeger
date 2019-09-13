@@ -18,4 +18,6 @@ interface Context
 
     function parse(string $name, array $data);
 
+    function child($name) : Context;
+
 }

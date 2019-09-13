@@ -56,10 +56,9 @@ class SpanExtractor {
 	public function extract() {
 		$this->parseContext();
 
-		$this->buildSpanOptions();
-
 		// Start the global span, it'll wrap the request/console lifecycle
 		$this->builtSpan = $this->tracer->start($this->name, [], $this->spanContext);
+		$this->tracer->finish($this->builtSpan);
 		return $this;
 	}
 
@@ -86,32 +85,14 @@ class SpanExtractor {
 
 	private function extractSpanContext()
 	{
+	    $this->converter->extract($this->traceContent);
+
+	    $this->spanContext = $this->converter->getContext();
 	}
 
 	private function extractPropagatedTags()
 	{
 		$this->tagPropagator->extract($this->traceContent);
-	}
-
-	/**
-	 * @var array
-	 */
-	private $spanOptions = [];
-
-	private function buildSpanOptions()
-	{
-		$this->spanOptions = [];
-
-		$this->addChildOfSpanOption();
-	}
-
-	private function addChildOfSpanOption()
-	{
-		$spanContextSet = ($this->spanContext instanceof SpanInterface);
-		if( !$spanContextSet )
-			return;
-
-		$this->spanOptions[Reference::CHILD_OF] = $this->spanContext;
 	}
 
 	/**

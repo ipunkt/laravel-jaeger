@@ -30,5 +30,9 @@ class EmptyContext implements Context
     {
     }
 
+    public function child($name): Context
+    {
+        return new self();
+    }
 
 }

@@ -38,19 +38,24 @@ class SpanContext implements Context
     /**
      * @var TagPropagator
      */
-    private $tagPropagator;
+    protected $tagPropagator;
 	/**
 	 * @var SpanExtractor
 	 */
-	private $spanExtractor;
+	protected $spanExtractor;
 	/**
 	 * @var TracerBuilder
 	 */
-	private $tracerBuilder;
+	protected $tracerBuilder;
 	/**
 	 * @var LogCleaner
 	 */
-	private $logCleaner;
+	protected $logCleaner;
+
+    /**
+     * @var ContextArrayConverter\ContextArrayConverter
+     */
+	protected $arrayConverter;
 
 	/**
 	 * MessageContext constructor.
@@ -62,40 +67,36 @@ class SpanContext implements Context
     public function __construct(TagPropagator $tagPropagator,
                                 SpanExtractor $spanExtractor,
                                 TracerBuilder $tracerBuilder,
-								LogCleaner $logCleaner) {
+								LogCleaner $logCleaner,
+                                ContextArrayConverter\ContextArrayConverter $arrayConverter) {
         $this->tagPropagator = $tagPropagator;
 	    $this->spanExtractor = $spanExtractor;
 	    $this->tracerBuilder = $tracerBuilder;
 	    $this->logCleaner = $logCleaner;
+	    $this->arrayConverter = $arrayConverter;
     }
 
     public function start()
     {
-        $this->buildTracer();
+
     }
 
     public function finish()
     {
         $this->tracer->finish($this->messageSpan);
-        $this->tracer->flush();
-    }
-
-    protected function buildTracer(): void
-    {
-    	$this->tracer = $this->tracerBuilder->build();
     }
 
     public function parse(string $name, array $data)
     {
     	$this->assertHasTracer();
 
-    	$this->messageSpan = $this->spanExtractor
-		    ->setName($name)
-		    ->setData($data)
-		    ->setTracer($this->tracer)
-		    ->setTagPropagator($this->tagPropagator)
-		    ->extract()
-	        ->getBuiltSpan();
+        $this->messageSpan = $this->spanExtractor
+            ->setName($name)
+            ->setData($data)
+            ->setTracer($this->tracer)
+            ->setTagPropagator($this->tagPropagator)
+            ->extract()
+            ->getBuiltSpan();
 
         // Set the uuid as a tag for this trace
         $this->uuid = Uuid::uuid1();
@@ -128,16 +129,19 @@ class SpanContext implements Context
     	$this->assertHasSpan();
 
         $context = $this->messageSpan->getContext();
-
-        Arr::set($messageData);
+        $this->arrayConverter->setContext($context)->inject($messageData);
 
         $this->tagPropagator->inject($messageData);
     }
 
 	public function log( array $fields ) {
     	$this->logCleaner->setLogs($fields)->clean();
-    	foreach($this->logCleaner->getLogs() as $logKey => $logValue)
+    	foreach($this->logCleaner->getLogs() as $logKey => $logValue) {
+    	    if(!is_string($logValue))
+    	        $logValue = json_encode($logValue);
+
             $this->messageSpan->addLog(new UserLog($logKey, 'info', $logValue));
+        }
 	}
 
 	private function assertHasTracer() {
@@ -152,5 +156,15 @@ class SpanContext implements Context
     		return;
 
     	throw new NoSpanException();
+	}
+
+    public function child($name): Context
+    {
+        $context = app(SpanContext::class);
+        $context->tracer = $this->tracer;
+        $context->messageSpan = $this->tracer->start($name, [], $this->messageSpan->getContext());
+        app()->instance('current-context', $context);
+        // TODO: return wrapper
+        return new WrapperContext($context, $this);
 	}
 }

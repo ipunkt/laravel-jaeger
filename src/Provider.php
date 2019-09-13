@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 use Ipunkt\LaravelJaeger\Context\EmptyContext;
 use Ipunkt\LaravelJaeger\Context\SpanContext;
 use Ipunkt\LaravelJaeger\LogCleaner\LogCleaner;
+use Jaeger\Client\ClientInterface;
 use Jaeger\Client\ThriftClient;
 use Jaeger\Id\IdGeneratorInterface;
 use Jaeger\Id\RandomIntGenerator;
@@ -21,6 +22,8 @@ use Jaeger\Sampler\RateLimitingSampler;
 use Jaeger\Sampler\SamplerInterface;
 use Jaeger\Span\Factory\SpanFactory;
 use Jaeger\Span\Factory\SpanFactoryInterface;
+use Jaeger\Span\SpanManagerInterface;
+use Jaeger\Span\StackSpanManager;
 use Jaeger\Thrift\Agent\AgentClient;
 use Jaeger\Transport\TUDPTransport;
 use Log;
@@ -58,7 +61,9 @@ class Provider extends ServiceProvider
             return Arr::get($hostPort, 1, 6831);
         });
 
+        $this->app->bind(SpanManagerInterface::class, StackSpanManager::class);
         $this->app->bind(SpanFactoryInterface::class, SpanFactory::class);
+        $this->app->bind(ClientInterface::class, ThriftClient::class);
         $this->app->bind(IdGeneratorInterface::class, RandomIntGenerator::class);
         $this->bindSamplers();
         $this->chooseSampler();
@@ -97,13 +102,7 @@ class Provider extends ServiceProvider
             return;
         }
 
-        $this->app->instance('context', app(SpanContext::class));
-        app('context')->start();
-
-
         $this->registerEvents();
-
-        $this->parseRequest();
         $this->parseCommand();
     }
 
@@ -112,28 +111,14 @@ class Provider extends ServiceProvider
         // When the app terminates we must finish the global span
         // and send the trace to the jaeger agent.
         app()->terminating(function () {
-            app('context')->finish();
+            if( app()->bound('context') )
+                app('context')->finish();
         });
 
         // Listen for each logged message and attach it to the global span
         Event::listen(MessageLogged::class, function (MessageLogged $e) {
-            app('context')->log((array)$e);
-        });
-
-        // Listen for the request handled event and set more tags for the trace
-        Event::listen(RequestHandled::class, function (RequestHandled $e) {
-            app('context')->setPrivateTags([
-                'user_id' => optional(auth()->user())->id ?? "-",
-                'company_id' => optional(auth()->user())->company_id ?? "-",
-
-                'request_host' => $e->request->getHost(),
-                'request_path' => $path = $e->request->path(),
-                'request_method' => $e->request->method(),
-
-                'api' => Str::contains($path, 'api'),
-                'response_status' => $e->response->getStatusCode(),
-                'error' => !$e->response->isSuccessful(),
-            ]);
+            if( app()->bound('current-context') )
+                app('current-context')->log((array)$e);
         });
     }
 
@@ -151,16 +136,6 @@ class Provider extends ServiceProvider
         });
     }
 
-    private function parseRequest()
-    {
-
-        if (app()->runningInConsole()) {
-            return;
-        }
-
-        app('context')->parse(request()->url(), request()->input());
-    }
-
     private function parseCommand()
     {
         if (!app()->runningInConsole()) {
@@ -169,7 +144,7 @@ class Provider extends ServiceProvider
 
         $currentArgs = request()->server('argv');
         $commandLine = implode(' ', $currentArgs);
-        app('context')->parse($commandLine, []);
+        app('context')->parse( $commandLine, [] );
     }
 
     private function disabledInConsole()
