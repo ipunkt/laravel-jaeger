@@ -23,7 +23,15 @@ class WrapperContext implements Context
 
     public function finish()
     {
-        return $this->context->finish();
+        $result = $this->context->finish();
+
+        if(app('current-context') !== $this->context) {
+            return;
+        }
+
+        app()->instance('current-context', $this->parentContext);
+
+        return $result;
     }
 
     public function setPrivateTags(array $tags)
@@ -58,9 +66,5 @@ class WrapperContext implements Context
     public function __destruct()
     {
         $this->finish();
-        if(app('current-context') !== $this->context)
-            return;
-
-        app()->instance('current-context', $this->parentContext);
     }
 }
