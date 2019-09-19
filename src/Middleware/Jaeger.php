@@ -15,6 +15,9 @@ class Jaeger
      */
     public function handle($request, \Closure $next)
     {
+        if( config('jaeger.disabled') )
+            return $next($request);
+
         $this->registerContext();
 
         app('context')->start();

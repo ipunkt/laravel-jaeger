@@ -1,5 +1,7 @@
 <?php
 return [
+    'disabled' => env('JAEGER_DISABLE', false),
+
 	'log' => [
 		'max-string-length' => 300,
 		'cutoff-indicator' => '...'

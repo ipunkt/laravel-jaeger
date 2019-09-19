@@ -92,6 +92,7 @@ class Provider extends ServiceProvider
         // Setup a unique ID for each request. This will allow us to find
         // the request trace in the jaeger ui
         $this->app->instance('context', app(EmptyContext::class));
+        $this->app->instance('current-context', app(EmptyContext::class));
     }
 
     public function boot()
