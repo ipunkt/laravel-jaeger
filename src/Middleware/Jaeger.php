@@ -58,8 +58,9 @@ class Jaeger
     {
 
         $header = $request->header('X-TRACE', '{}');
+        $jsonHeader = urldecode($header);
 
-        $traceData = json_decode($header, true);
+        $traceData = json_decode($jsonHeader, true);
         if(!is_array($traceData))
             $traceData = [];
 

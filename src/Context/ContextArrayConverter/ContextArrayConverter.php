@@ -28,7 +28,7 @@ class ContextArrayConverter
             return $this;
         }
 
-        $this->spanContext = new SpanContext(
+        $this->context = new SpanContext(
             Arr::get($data, 'trace-id'),
             Arr::get($data, 'span-id'),
             Arr::get($data, 'parent-id'),
