@@ -27,7 +27,6 @@ class MasterSpanContext extends SpanContext implements Context
 
     public function finish()
     {
-        parent::finish();
         $this->tracer->flush();
     }
 
