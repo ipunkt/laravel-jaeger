@@ -1,6 +1,7 @@
 <?php namespace Ipunkt\LaravelJaeger;
 
 use DB;
+use Ipunkt\LaravelJaeger\Context\MasterSpanContext;
 use Event;
 use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Log\Events\MessageLogged;
@@ -28,7 +29,6 @@ use Jaeger\Thrift\Agent\AgentClient;
 use Jaeger\Transport\TUDPTransport;
 use Log;
 use Thrift\Protocol\TCompactProtocol;
-use Ipunkt\LaravelJaeger\Context\MasterSpanContext;
 
 /**
  * Class Provider
@@ -106,16 +106,11 @@ class Provider extends ServiceProvider
 
         $this->registerEvents();
         $this->parseCommand();
+        $this->registerConsoleEvents();
     }
 
     protected function registerEvents(): void
     {
-        // When the app terminates we must finish the global span
-        // and send the trace to the jaeger agent.
-        app()->terminating(function () {
-            if( app()->bound('context') )
-                app('context')->finish();
-        });
 
         // Listen for each logged message and attach it to the global span
         Event::listen(MessageLogged::class, function (MessageLogged $e) {
@@ -193,5 +188,18 @@ class Provider extends ServiceProvider
                 $this->app->bind(SamplerInterface::class, ConstSampler::class);
                 break;
         }
+    }
+
+    protected function registerConsoleEvents() {
+        if (!app()->runningInConsole()) {
+            return;
+        }
+
+        // When the app terminates we must finish the global span
+        // and send the trace to the jaeger agent.
+        app()->terminating(function () {
+            if( app()->bound('context') )
+                app('context')->finish();
+        });
     }
 }
