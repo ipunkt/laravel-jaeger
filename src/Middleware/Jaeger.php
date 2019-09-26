@@ -57,7 +57,7 @@ class Jaeger
     private function parseRequest($request)
     {
 
-        $header = $request->header('context', '{}');
+        $header = $request->header('X-TRACE', '{}');
 
         $traceData = json_decode($header, true);
         if(!is_array($traceData))

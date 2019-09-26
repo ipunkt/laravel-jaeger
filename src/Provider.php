@@ -28,6 +28,7 @@ use Jaeger\Thrift\Agent\AgentClient;
 use Jaeger\Transport\TUDPTransport;
 use Log;
 use Thrift\Protocol\TCompactProtocol;
+use Ipunkt\LaravelJaeger\Context\MasterSpanContext;
 
 /**
  * Class Provider
@@ -38,11 +39,11 @@ class Provider extends ServiceProvider
     public function register()
     {
         $this->mergeConfigFrom(
-            __DIR__ . '/config/jaeger.php', 'jaeger'
+            __DIR__ . '/../config/jaeger.php', 'jaeger'
         );
 
         $this->publishes([
-            __DIR__ . '/config/jaeger.php' => config_path('jaeger.php'),
+            __DIR__ . '/../config/jaeger.php' => config_path('jaeger.php'),
         ]);
 
 
@@ -145,7 +146,13 @@ class Provider extends ServiceProvider
 
         $currentArgs = request()->server('argv');
         $commandLine = implode(' ', $currentArgs);
-        app('context')->parse( $commandLine, [] );
+
+        $instance = app(MasterSpanContext::class);
+        app()->instance('context', $instance);
+        app()->instance('current-context', $instance);
+
+        $instance->start();
+        $instance->parse( $commandLine, [] );
     }
 
     private function disabledInConsole()
