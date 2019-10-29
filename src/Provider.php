@@ -100,11 +100,12 @@ class Provider extends ServiceProvider
     {
         $this->setupQueryLogging();
 
+        $this->registerEvents();
+
         if (app()->runningInConsole() && $this->disabledInConsole()) {
             return;
         }
 
-        $this->registerEvents();
         $this->parseCommand();
         $this->registerConsoleEvents();
     }
