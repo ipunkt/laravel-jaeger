@@ -13,6 +13,13 @@ return [
 
     /**
      * possible values:
+     * - probabilistic
+     *   - param is the chance in percent that a request will be logged
+     * - rate-limiting
+     * - adaptive
+     *   -
+     * - const
+     *   - ignores param, all requests will be logged
      */
     'sampler' => env('JAEGER_SAMPLER', 'const'),
 
