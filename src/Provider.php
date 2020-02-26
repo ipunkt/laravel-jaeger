@@ -122,6 +122,10 @@ class Provider extends ServiceProvider
 
     private function setupQueryLogging()
     {
+        $enabled = config('jaeger.log.database');
+        $disabled = !$enabled;
+        if( $disabled )
+            return;
 
         // Also listen for queries and log then,
         // it also receives the log in the MessageLogged event above

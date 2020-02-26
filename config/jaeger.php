@@ -2,7 +2,9 @@
 return [
     'disabled' => env('JAEGER_DISABLE', false),
 
+
 	'log' => [
+	    'database' => env('JAEGER_LOG_DATABASE', false),
 		'max-string-length' => 300,
 		'cutoff-indicator' => '...'
 	],
