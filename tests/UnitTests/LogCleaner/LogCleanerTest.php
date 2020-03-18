@@ -1,4 +1,4 @@
-<?php namespace Ipunkt\LaravelJaegerTests\LogCleaner;
+<?php namespace Ipunkt\LaravelJaegerTests\UnitTests\LogCleaner;
 
 use Ipunkt\LaravelJaeger\LogCleaner\LogCleaner;
 use Ipunkt\LaravelJaegerTests\TestCase;

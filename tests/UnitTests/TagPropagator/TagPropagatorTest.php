@@ -1,4 +1,4 @@
-<?php namespace Ipunkt\LaravelJaegerTests\TagPropagator;
+<?php namespace Ipunkt\LaravelJaegerTests\UnitTests\TagPropagator;
 
 use Ipunkt\LaravelJaeger\TagPropagator\TagPropagator;
 use Ipunkt\LaravelJaegerTests\TestCase;
