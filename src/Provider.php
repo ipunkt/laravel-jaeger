@@ -1,6 +1,7 @@
 <?php namespace Ipunkt\LaravelJaeger;
 
 use DB;
+use Ipunkt\LaravelJaeger\Codec\ShortTextCodec;
 use Ipunkt\LaravelJaeger\Context\MasterSpanContext;
 use Event;
 use Illuminate\Log\Events\MessageLogged;
@@ -11,7 +12,6 @@ use Ipunkt\LaravelJaeger\LogCleaner\LogCleaner;
 use Jaeger\Client\ClientInterface;
 use Jaeger\Client\ThriftClient;
 use Jaeger\Codec\CodecInterface;
-use Jaeger\Codec\TextCodec;
 use Jaeger\Id\IdGeneratorInterface;
 use Jaeger\Id\RandomIntGenerator;
 use Jaeger\Sampler\AdaptiveSampler;
@@ -61,7 +61,7 @@ class Provider extends ServiceProvider
             return Arr::get($hostPort, 1, 6831);
         });
 
-        $this->app->bind(CodecInterface::class, TextCodec::class);
+        $this->app->bind(CodecInterface::class, ShortTextCodec::class);
         $this->app->bind(SpanManagerInterface::class, StackSpanManager::class);
         $this->app->bind(SpanFactoryInterface::class, SpanFactory::class);
         $this->app->bind(ClientInterface::class, ThriftClient::class);
