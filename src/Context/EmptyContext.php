@@ -35,4 +35,7 @@ class EmptyContext implements Context
         return new self();
     }
 
+	public function fromUberId( string $name, string $uberTraceId ) {
+    	return $this;
+	}
 }

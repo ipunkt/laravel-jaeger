@@ -18,6 +18,8 @@ interface Context
 
     function parse(string $name, array $data);
 
+    function fromUberId(string $name, string $uberTraceId);
+
     function child($name) : Context;
 
 }

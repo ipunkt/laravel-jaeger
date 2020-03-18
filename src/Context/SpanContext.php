@@ -6,6 +6,7 @@ use Ipunkt\LaravelJaeger\Context\TracerBuilder\TracerBuilder;
 use Ipunkt\LaravelJaeger\LogCleaner\LogCleaner;
 use Ipunkt\LaravelJaeger\SpanExtractor\SpanExtractor;
 use Ipunkt\LaravelJaeger\TagPropagator\TagPropagator;
+use Jaeger\Codec\CodecInterface;
 use Jaeger\Log\UserLog;
 use Jaeger\Span\Span;
 use Jaeger\Span\SpanInterface;
@@ -56,17 +57,24 @@ class SpanContext implements Context
      * @var ContextArrayConverter\ContextArrayConverter
      */
 	protected $arrayConverter;
+	/**
+	 * @var CodecInterface
+	 */
+	private $codec;
 
 	/**
 	 * MessageContext constructor.
 	 * @param TagPropagator $tagPropagator
 	 * @param SpanExtractor $spanExtractor
 	 * @param TracerBuilder $tracerBuilder
+	 * @param CodecInterface $codec
 	 * @param LogCleaner $logCleaner
+	 * @param ContextArrayConverter\ContextArrayConverter $arrayConverter
 	 */
     public function __construct(TagPropagator $tagPropagator,
                                 SpanExtractor $spanExtractor,
                                 TracerBuilder $tracerBuilder,
+								CodecInterface $codec,
 								LogCleaner $logCleaner,
                                 ContextArrayConverter\ContextArrayConverter $arrayConverter) {
         $this->tagPropagator = $tagPropagator;
@@ -74,6 +82,7 @@ class SpanContext implements Context
 	    $this->tracerBuilder = $tracerBuilder;
 	    $this->logCleaner = $logCleaner;
 	    $this->arrayConverter = $arrayConverter;
+	    $this->codec = $codec;
     }
 
     public function start()
@@ -85,6 +94,25 @@ class SpanContext implements Context
     {
         $this->tracer->finish($this->messageSpan);
     }
+
+	public function fromUberId( string $name, string $uberId ) {
+		$this->assertHasTracer();
+
+		$filledUberId = $this->fillUberIdIfNecessary($uberId);
+
+		$context = $this->codec->decode($filledUberId);
+		$this->messageSpan = $this->tracer->start($name, [], $context);
+		return $this;
+    }
+
+	private function fillUberIdIfNecessary( string $uberId ) {
+		$parts = collect(explode(':', $uberId));
+
+		while($parts->count() < 4)
+			$parts->push('0');
+
+		return $parts->implode(':');
+	}
 
     public function parse(string $name, array $data)
     {

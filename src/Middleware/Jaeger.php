@@ -1,13 +1,27 @@
 <?php namespace Ipunkt\LaravelJaeger\Middleware;
 
+use Illuminate\Http\Request;
 use Ipunkt\LaravelJaeger\Context\MasterSpanContext;
 use Illuminate\Support\Str;
+use Jaeger\Codec\CodecInterface;
 
 /**
  * Class Jaeger
  */
 class Jaeger
 {
+	/**
+	 * @var CodecInterface
+	 */
+	private $decoder;
+
+	/**
+	 * Jaeger constructor.
+	 * @param CodecInterface $decoder
+	 */
+	public function __construct( CodecInterface $decoder) {
+		$this->decoder = $decoder;
+	}
 
     /**
      * @param \Illuminate\Http\Request $request
@@ -57,8 +71,14 @@ class Jaeger
     private function parseRequest($request)
     {
 
-        $header = $request->header('X-TRACE', '{}');
-        $jsonHeader = urldecode($header);
+    	$uberIdHeader = $request->header('UBER-TRACE-ID');
+    	if( !empty($uberIdHeader) ) {
+		    app('context')->fromUberId($request->url(), $uberIdHeader);
+		    return;
+	    }
+
+        $xHeader = $request->header('X-TRACE', '{}');
+        $jsonHeader = urldecode($xHeader);
 
         $traceData = json_decode($jsonHeader, true);
         if(!is_array($traceData))
