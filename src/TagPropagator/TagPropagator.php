@@ -23,11 +23,13 @@ class TagPropagator
     public function addTags($tags)
     {
         $this->propagatedTags = array_merge($this->propagatedTags, $tags);
+	    return $this;
     }
 
     public function reset()
     {
         $this->propagatedTags = [];
+        return $this;
     }
 
     /**
@@ -36,13 +38,14 @@ class TagPropagator
     public function extract(array $data)
     {
         if(! array_key_exists($this->dataCarrierKey, $data) )
-            return;
+            return $this;
 
         $tagsFromData = $data[$this->dataCarrierKey];
         if( !is_array($tagsFromData) )
-            return;
+            return $this;
 
         $this->addTags( $tagsFromData );
+        return $this;
     }
 
     /**

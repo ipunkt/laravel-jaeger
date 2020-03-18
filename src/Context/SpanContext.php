@@ -1,8 +1,11 @@
 <?php namespace Ipunkt\LaravelJaeger\Context;
 
-use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
+use Ipunkt\LaravelJaeger\Context\ContextArrayConverter\ContextArrayConverter;
 use Ipunkt\LaravelJaeger\Context\Exceptions\NoSpanException;
 use Ipunkt\LaravelJaeger\Context\Exceptions\NoTracerException;
+use Ipunkt\LaravelJaeger\Context\Exceptions\NoUberTraceIdException;
+use Ipunkt\LaravelJaeger\Context\Exceptions\NoXTraceException;
 use Ipunkt\LaravelJaeger\LogCleaner\LogCleaner;
 use Ipunkt\LaravelJaeger\TagPropagator\TagPropagator;
 use Jaeger\Codec\CodecInterface;
@@ -48,20 +51,27 @@ class SpanContext implements Context
 	 * @var CodecInterface
 	 */
 	private $codec;
+	/**
+	 * @var ContextArrayConverter
+	 */
+	private $contextArrayConverter;
 
 	/**
 	 * MessageContext constructor.
 	 * @param TagPropagator $tagPropagator
 	 * @param CodecInterface $codec
+	 * @param ContextArrayConverter $contextArrayConverter
 	 * @param LogCleaner $logCleaner
 	 */
     public function __construct(TagPropagator $tagPropagator,
 								CodecInterface $codec,
+								ContextArrayConverter $contextArrayConverter,
 								LogCleaner $logCleaner)
     {
         $this->tagPropagator = $tagPropagator;
 	    $this->logCleaner = $logCleaner;
 	    $this->codec = $codec;
+	    $this->contextArrayConverter = $contextArrayConverter;
     }
 
     public function start()
@@ -97,9 +107,8 @@ class SpanContext implements Context
     {
     	$this->assertHasTracer();
 
-    	$context = $this->codec->decode( Arr::get($data, 'uber-trace-id') );
-    	$this->tagPropagator->extract( $data );
-    	$span = $this->tracer->start($name, [], $context);
+	    $context = $this->parseContext( collect($data) );
+	    $span = $this->tracer->start($name, [], $context);
 
         // Set the uuid as a tag for this trace
         $this->uuid = Uuid::uuid1();
@@ -107,10 +116,67 @@ class SpanContext implements Context
 	        'uuid' => (string)$this->uuid,
 	        'environment' => config('app.env')
         ]);
-        $this->tagPropagator->apply($span);
+	    $this->tagPropagator
+		    ->extract( $data )
+			->apply($span);
 
 	    $this->messageSpan = $span;
     }
+
+	/**
+	 * @param array $data
+	 * @return \Jaeger\Span\Context\SpanContext|null
+	 */
+	protected function parseContext( Collection $data ) {
+		try {
+			return $this->parseUberTraceId($data);
+		} catch(NoUberTraceIdException $exception) {
+			// continue
+		}
+
+		try {
+			return $this->parseXTraceId($data);
+		} catch(NoXTraceException $e) {
+			//continue
+		}
+
+		return null;
+	}
+
+	protected function parseUberTraceId(Collection $data) {
+		$uberTraceId = $data->first(function($value, $key) {
+			if(strtolower($key) === 'uber-trace-id') {
+				return true;
+			}
+			return false;
+		});
+
+		if( empty($uberTraceId) )
+			throw new NoUberTraceIdException();
+
+		$context = $this->codec->decode( $uberTraceId );
+		return $context;
+	}
+
+	protected function parseXTraceId(Collection $data) {
+		$xTraceId = $data->first(function($value, $key) {
+			if(strtolower($key) === 'x-trace') {
+				return true;
+			}
+			return false;
+		});
+
+		if( empty($xTraceId) )
+			throw new NoXTraceException();
+
+		$data = json_decode( $xTraceId, true );
+
+		$context = $this->contextArrayConverter
+			->extract($data)
+			->getContext();
+
+		return $context;
+	}
 
     public function setPrivateTags(array $tags)
     {
