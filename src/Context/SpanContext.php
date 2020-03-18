@@ -1,10 +1,9 @@
 <?php namespace Ipunkt\LaravelJaeger\Context;
 
+use Illuminate\Support\Arr;
 use Ipunkt\LaravelJaeger\Context\Exceptions\NoSpanException;
 use Ipunkt\LaravelJaeger\Context\Exceptions\NoTracerException;
-use Ipunkt\LaravelJaeger\Context\TracerBuilder\TracerBuilder;
 use Ipunkt\LaravelJaeger\LogCleaner\LogCleaner;
-use Ipunkt\LaravelJaeger\SpanExtractor\SpanExtractor;
 use Ipunkt\LaravelJaeger\TagPropagator\TagPropagator;
 use Jaeger\Codec\CodecInterface;
 use Jaeger\Log\UserLog;
@@ -41,18 +40,10 @@ class SpanContext implements Context
      */
     protected $tagPropagator;
 	/**
-	 * @var SpanExtractor
-	 */
-	protected $spanExtractor;
-	/**
 	 * @var LogCleaner
 	 */
 	protected $logCleaner;
 
-    /**
-     * @var ContextArrayConverter\ContextArrayConverter
-     */
-	protected $arrayConverter;
 	/**
 	 * @var CodecInterface
 	 */
@@ -61,20 +52,15 @@ class SpanContext implements Context
 	/**
 	 * MessageContext constructor.
 	 * @param TagPropagator $tagPropagator
-	 * @param SpanExtractor $spanExtractor
 	 * @param CodecInterface $codec
 	 * @param LogCleaner $logCleaner
-	 * @param ContextArrayConverter\ContextArrayConverter $arrayConverter
 	 */
     public function __construct(TagPropagator $tagPropagator,
-                                SpanExtractor $spanExtractor,
 								CodecInterface $codec,
-								LogCleaner $logCleaner,
-                                ContextArrayConverter\ContextArrayConverter $arrayConverter) {
+								LogCleaner $logCleaner)
+    {
         $this->tagPropagator = $tagPropagator;
-	    $this->spanExtractor = $spanExtractor;
 	    $this->logCleaner = $logCleaner;
-	    $this->arrayConverter = $arrayConverter;
 	    $this->codec = $codec;
     }
 
@@ -111,13 +97,9 @@ class SpanContext implements Context
     {
     	$this->assertHasTracer();
 
-        $this->messageSpan = $this->spanExtractor
-            ->setName($name)
-            ->setData($data)
-            ->setTracer($this->tracer)
-            ->setTagPropagator($this->tagPropagator)
-            ->extract()
-            ->getBuiltSpan();
+    	$context = $this->codec->decode( Arr::get($data, 'uber-trace-id') );
+    	$this->tagPropagator->extract( $data );
+    	$span = $this->tracer->start($name, [], $context);
 
         // Set the uuid as a tag for this trace
         $this->uuid = Uuid::uuid1();
@@ -125,7 +107,9 @@ class SpanContext implements Context
 	        'uuid' => (string)$this->uuid,
 	        'environment' => config('app.env')
         ]);
-        $this->tagPropagator->apply($this->messageSpan);
+        $this->tagPropagator->apply($span);
+
+	    $this->messageSpan = $span;
     }
 
     public function setPrivateTags(array $tags)
@@ -150,7 +134,8 @@ class SpanContext implements Context
     	$this->assertHasSpan();
 
         $context = $this->messageSpan->getContext();
-        $this->arrayConverter->setContext($context)->inject($messageData);
+
+        $messageData['uber-trace-id'] = $this->codec->encode($context);
 
         $this->tagPropagator->inject($messageData);
     }
