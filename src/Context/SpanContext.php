@@ -45,10 +45,6 @@ class SpanContext implements Context
 	 */
 	protected $spanExtractor;
 	/**
-	 * @var TracerBuilder
-	 */
-	protected $tracerBuilder;
-	/**
 	 * @var LogCleaner
 	 */
 	protected $logCleaner;
@@ -66,20 +62,17 @@ class SpanContext implements Context
 	 * MessageContext constructor.
 	 * @param TagPropagator $tagPropagator
 	 * @param SpanExtractor $spanExtractor
-	 * @param TracerBuilder $tracerBuilder
 	 * @param CodecInterface $codec
 	 * @param LogCleaner $logCleaner
 	 * @param ContextArrayConverter\ContextArrayConverter $arrayConverter
 	 */
     public function __construct(TagPropagator $tagPropagator,
                                 SpanExtractor $spanExtractor,
-                                TracerBuilder $tracerBuilder,
 								CodecInterface $codec,
 								LogCleaner $logCleaner,
                                 ContextArrayConverter\ContextArrayConverter $arrayConverter) {
         $this->tagPropagator = $tagPropagator;
 	    $this->spanExtractor = $spanExtractor;
-	    $this->tracerBuilder = $tracerBuilder;
 	    $this->logCleaner = $logCleaner;
 	    $this->arrayConverter = $arrayConverter;
 	    $this->codec = $codec;
