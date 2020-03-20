@@ -76,7 +76,7 @@ class SpanContext implements Context
 
     public function start()
     {
-
+    	$this->tracer = app(Tracer::class);
     }
 
     public function finish()
@@ -108,7 +108,7 @@ class SpanContext implements Context
     	$this->assertHasTracer();
 
 	    $context = $this->parseContext( collect($data) );
-	    $span = $this->tracer->start($name, [], $context);
+	    $this->messageSpan= $this->tracer->start($name, [], $context);
 
         // Set the uuid as a tag for this trace
         $this->uuid = Uuid::uuid1();
@@ -118,9 +118,8 @@ class SpanContext implements Context
         ]);
 	    $this->tagPropagator
 		    ->extract( $data )
-			->apply($span);
+			->apply($this->messageSpan);
 
-	    $this->messageSpan = $span;
     }
 
 	/**

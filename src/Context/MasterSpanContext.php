@@ -19,7 +19,6 @@ use Ramsey\Uuid\UuidInterface;
  */
 class MasterSpanContext extends SpanContext implements Context
 {
-
     public function start()
     {
         $this->buildTracer();
@@ -32,6 +31,6 @@ class MasterSpanContext extends SpanContext implements Context
 
     protected function buildTracer(): void
     {
-        $this->tracer = $this->tracerBuilder->build();
+        $this->tracer = app(Tracer::class);
     }
 }
