@@ -199,6 +199,7 @@ class SpanContext implements Context
 
         $context = $this->messageSpan->getContext();
 
+        $this->contextArrayConverter->setContext($this->messageSpan->getContext())->inject($messageData);
         $messageData['uber-trace-id'] = $this->codec->encode($context);
 
         $this->tagPropagator->inject($messageData);
