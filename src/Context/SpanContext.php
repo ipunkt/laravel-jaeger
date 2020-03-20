@@ -76,7 +76,6 @@ class SpanContext implements Context
 
     public function start()
     {
-    	$this->tracer = app(Tracer::class);
     }
 
     public function finish()
