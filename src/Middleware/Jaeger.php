@@ -42,6 +42,7 @@ class Jaeger
         app('context')->setPrivateTags([
             'user_id' => optional(auth()->user())->id ?? "-",
             'company_id' => optional(auth()->user())->company_id ?? "-",
+            'environment' => app()->environment(),
 
             'request_host' => $request->getHost(),
             'request_path' => $path = $request->path(),
