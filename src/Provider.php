@@ -104,12 +104,20 @@ class Provider extends ServiceProvider
 
         $this->captureLogging();
 
-        if (app()->runningInConsole() && $this->disabledInConsole()) {
-            return;
-        }
+        $this->handleConsole();
+    }
 
-        $this->parseCommand();
-        $this->registerConsoleEvents();
+	protected function handleConsole() {
+		if ( app()->runningInConsole() && $this->disabledInConsole() ) {
+			return;
+		}
+
+		if ( !app()->runningInConsole() ) {
+			return;
+		}
+
+		$this->parseCommand();
+		$this->registerConsoleEvents();
     }
 
     private function setupQueryLogging()
