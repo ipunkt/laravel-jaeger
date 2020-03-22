@@ -208,13 +208,13 @@ class Provider extends ServiceProvider
 		$this->app->bind( CodecInterface::class, ShortTextCodec::class );
 
 		$this->app->resolving(SpanContext::class, function(SpanContext $spanContext) {
-			collect( config('jaeger.codecs.extract', []) )->each( function($codecName) use ($spanContext) {
+			collect( config('jaeger.codecs.extract', []) )->each( function($codecName, $headerName) use ($spanContext) {
 				$codec = $this->buildCodec($codecName);
-				$spanContext->registerExtractCodec( $codec );
+				$spanContext->registerExtractCodec( $headerName, $codec );
 			});
-			collect( config('jaeger.codecs.inject', []) )->each( function($codecName) use ($spanContext) {
+			collect( config('jaeger.codecs.inject', []) )->each( function($codecName, $headerName) use ($spanContext) {
 				$codec = $this->buildCodec($codecName);
-				$spanContext->registerInjectCodec( $codec );
+				$spanContext->registerInjectCodec( $headerName, $codec );
 			});
 		});
 	}
