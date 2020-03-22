@@ -42,7 +42,6 @@ class Jaeger
         app('context')->setPrivateTags([
             'user_id' => optional(auth()->user())->id ?? "-",
             'company_id' => optional(auth()->user())->company_id ?? "-",
-            'environment' => app()->environment(),
 
             'request_host' => $request->getHost(),
             'request_path' => $path = $request->path(),
@@ -71,19 +70,7 @@ class Jaeger
      */
     private function parseRequest($request)
     {
-
-    	$uberIdHeader = $request->header('UBER-TRACE-ID');
-    	if( !empty($uberIdHeader) ) {
-		    app('context')->fromUberId($request->url(), $uberIdHeader);
-		    return;
-	    }
-
-        $xHeader = $request->header('X-TRACE', '{}');
-        $jsonHeader = urldecode($xHeader);
-
-        $traceData = json_decode($jsonHeader, true);
-        if(!is_array($traceData))
-            $traceData = [];
+    	$traceData = $request->header();
 
         app('context')->parse($request->url(), $traceData);
     }

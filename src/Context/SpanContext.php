@@ -113,7 +113,7 @@ class SpanContext implements Context
         $this->uuid = Uuid::uuid1();
         $this->setPrivateTags([
 	        'uuid' => (string)$this->uuid,
-	        'environment' => config('app.env')
+	        'environment' => app()->environment(),
         ]);
 	    $this->tagPropagator
 		    ->extract( $data )
@@ -199,7 +199,9 @@ class SpanContext implements Context
 
         $context = $this->messageSpan->getContext();
 
-        $this->contextArrayConverter->setContext($this->messageSpan->getContext())->inject($messageData);
+        $xtraceData = [];
+        $this->contextArrayConverter->setContext($this->messageSpan->getContext())->inject($xtraceData);
+        $messageData['x-trace'] = urlencode( json_encode($xtraceData) );
         $messageData['uber-trace-id'] = $this->codec->encode($context);
 
         $this->tagPropagator->inject($messageData);
