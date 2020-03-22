@@ -22,7 +22,9 @@ class JsonCodec implements CodecInterface {
 		$this->converter = $converter;
 	}
 
-	public function decode( $data ): ?SpanContext {
+	public function decode( $json ): ?SpanContext {
+		$data = json_decode( urldecode($json), true);
+
 		return $this->converter
 			->extract($data)
 			->getContext();
