@@ -35,6 +35,6 @@ class JsonCodec implements CodecInterface {
 			->setContext($context)
 			->inject($data);
 
-		return $data;
+		return urlencode( json_encode($data) );
 	}
 }
