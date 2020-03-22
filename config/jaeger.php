@@ -2,6 +2,42 @@
 return [
     'disabled' => env('JAEGER_DISABLE', false),
 
+	/**
+	 * Available codcs:
+	 * - text - reads and writes the common uber-trace-id style header
+	 *   - Example :
+	 * - json - a custom codec which reads and writes information to json
+	 *   - Example:
+	 */
+	'codecs' => [
+		// Codecs used to accept
+		/**
+		 * Codecs used extract context from http,rabbitmq etc header
+		 * codecs will be tried top to bottom and the first one to find a context will be used if multiple are present
+		 * - ipunkt/laravel-jaeger (this package) reads from http headers on incoming requests
+		 * - ipunkt/laravel-jaeger-rabbitmq reads from rabbitmq message header
+		 */
+		'extract' => [
+			'uber-trace-id' => 'text',
+			'x-trace' => 'json',
+		],
+
+		/**
+		 * Codecs used inject context into http,rabbitmq etc header
+		 * All codecs given here will be injected
+		 *
+		 * This has no effect with this package alone but rather with packages bridging to other communication platforms
+		 * e.g.
+		 * - ipunkt/laravel-jaeger-guzzle
+		 * - ipunkt/laravel-jaeger-rabbitmq
+		 * - anything that uses app('context')->inject() or app('current-context')->inject()
+		 */
+		'inject' => [
+			'uber-trace-id' => 'text',
+			'x-trace' => 'json',
+		],
+	],
+
 
 	'log' => [
 	    'database' => env('JAEGER_LOG_DATABASE', false),

@@ -43,9 +43,15 @@ class SpanContext implements Context
 	protected $logCleaner;
 
 	/**
-	 * @var CodecInterface
+	 * @var Collection|CodecInterface[]
 	 */
-	private $codec;
+	protected $injectCodecs;
+
+	/**
+	 * @var Collection|CodecInterface[]
+	 */
+	protected $extractCodecs;
+
 	/**
 	 * @var ContextArrayConverter
 	 */
@@ -53,18 +59,16 @@ class SpanContext implements Context
 
 	/**
 	 * MessageContext constructor.
-	 * @param CodecInterface $codec
 	 * @param ContextArrayConverter $contextArrayConverter
 	 * @param LogCleaner $logCleaner
 	 */
-    public function __construct(
-								CodecInterface $codec,
-								ContextArrayConverter $contextArrayConverter,
+    public function __construct(ContextArrayConverter $contextArrayConverter,
 								LogCleaner $logCleaner)
     {
 	    $this->logCleaner = $logCleaner;
-	    $this->codec = $codec;
 	    $this->contextArrayConverter = $contextArrayConverter;
+	    $this->extractCodecs = collect();
+	    $this->injectCodecs = collect();
     }
 
     public function start()
@@ -227,5 +231,13 @@ class SpanContext implements Context
         $context->messageSpan = $this->tracer->start($name, [], $this->messageSpan->getContext());
         app()->instance('current-context', $context);
         return new WrapperContext($context, $this);
+	}
+
+	public function registerInjectCodec(CodecInterface $codec) {
+    	$this->injectCodecs->push($codec);
+	}
+
+	public function registerExtractCodec(CodecInterface $codec) {
+    	$this->extractCodecs->push($codec);
 	}
 }

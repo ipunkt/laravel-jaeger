@@ -1,6 +1,7 @@
 <?php namespace Ipunkt\LaravelJaeger;
 
 use DB;
+use Ipunkt\LaravelJaeger\Codec\JsonCodec;
 use Ipunkt\LaravelJaeger\Codec\ShortTextCodec;
 use Ipunkt\LaravelJaeger\Context\MasterSpanContext;
 use Event;
@@ -8,6 +9,7 @@ use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Arr;
 use Illuminate\Support\ServiceProvider;
 use Ipunkt\LaravelJaeger\Context\EmptyContext;
+use Ipunkt\LaravelJaeger\Context\SpanContext;
 use Ipunkt\LaravelJaeger\LogCleaner\LogCleaner;
 use Jaeger\Client\ClientInterface;
 use Jaeger\Client\ThriftClient;
@@ -61,8 +63,8 @@ class Provider extends ServiceProvider
             return Arr::get($hostPort, 1, 6831);
         });
 
-        $this->app->bind(CodecInterface::class, ShortTextCodec::class);
-        $this->app->bind(SpanManagerInterface::class, StackSpanManager::class);
+	    $this->registerCodecs();
+	    $this->app->bind(SpanManagerInterface::class, StackSpanManager::class);
         $this->app->bind(SpanFactoryInterface::class, SpanFactory::class);
         $this->app->bind(ClientInterface::class, ThriftClient::class);
         $this->app->bind(IdGeneratorInterface::class, RandomIntGenerator::class);
@@ -100,7 +102,7 @@ class Provider extends ServiceProvider
     {
         $this->setupQueryLogging();
 
-        $this->registerEvents();
+        $this->captureLogging();
 
         if (app()->runningInConsole() && $this->disabledInConsole()) {
             return;
@@ -108,16 +110,6 @@ class Provider extends ServiceProvider
 
         $this->parseCommand();
         $this->registerConsoleEvents();
-    }
-
-    protected function registerEvents(): void
-    {
-
-        // Listen for each logged message and attach it to the global span
-        Event::listen(MessageLogged::class, function (MessageLogged $e) {
-            if( app()->bound('current-context') )
-                app('current-context')->log((array)$e);
-        });
     }
 
     private function setupQueryLogging()
@@ -138,12 +130,18 @@ class Provider extends ServiceProvider
         });
     }
 
+	protected function captureLogging(): void
+	{
+
+		// Listen for each logged message and attach it to the global span
+		Event::listen(MessageLogged::class, function (MessageLogged $e) {
+			if( app()->bound('current-context') )
+				app('current-context')->log((array)$e);
+		});
+	}
+
     private function parseCommand()
     {
-        if (!app()->runningInConsole()) {
-            return;
-        }
-
         $currentArgs = request()->server('argv');
         $commandLine = implode(' ', $currentArgs);
 
@@ -196,10 +194,6 @@ class Provider extends ServiceProvider
     }
 
     protected function registerConsoleEvents() {
-        if (!app()->runningInConsole()) {
-            return;
-        }
-
         // When the app terminates we must finish the global span
         // and send the trace to the jaeger agent.
         app()->terminating(function () {
@@ -207,4 +201,25 @@ class Provider extends ServiceProvider
                 app('context')->finish();
         });
     }
+
+	protected function registerCodecs(): void {
+		$this->app->bind( 'codec-json', JsonCodec::class );
+		$this->app->bind( 'codec-text', ShortTextCodec::class );
+		$this->app->bind( CodecInterface::class, ShortTextCodec::class );
+
+		$this->app->resolving(SpanContext::class, function(SpanContext $spanContext) {
+			collect( config('jaeger.codecs.extract', []) )->each( function($codecName) use ($spanContext) {
+				$codec = $this->buildCodec($codecName);
+				$spanContext->registerExtractCodec( $codec );
+			});
+			collect( config('jaeger.codecs.inject', []) )->each( function($codecName) use ($spanContext) {
+				$codec = $this->buildCodec($codecName);
+				$spanContext->registerInjectCodec( $codec );
+			});
+		});
+	}
+
+	protected function buildCodec( $codecName ) {
+    	return app('codec-'.$codecName);
+	}
 }
