@@ -53,10 +53,6 @@ class WrapperContext implements Context
         return $this->context->inject($messageData);
     }
 
-	public function fromUberId( string $name, string $uberTraceId ) {
-    	return $this->context->fromUberId($name, $uberTraceId);
-	}
-
     public function parse(string $name, array $data)
     {
         return $this->context->parse($name, $data);

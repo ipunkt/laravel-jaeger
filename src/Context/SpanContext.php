@@ -4,8 +4,6 @@ use Illuminate\Support\Collection;
 use Ipunkt\LaravelJaeger\Context\ContextArrayConverter\ContextArrayConverter;
 use Ipunkt\LaravelJaeger\Context\Exceptions\NoSpanException;
 use Ipunkt\LaravelJaeger\Context\Exceptions\NoTracerException;
-use Ipunkt\LaravelJaeger\Context\Exceptions\NoUberTraceIdException;
-use Ipunkt\LaravelJaeger\Context\Exceptions\NoXTraceException;
 use Ipunkt\LaravelJaeger\LogCleaner\LogCleaner;
 use Jaeger\Codec\CodecInterface;
 use Jaeger\Log\UserLog;
@@ -80,31 +78,12 @@ class SpanContext implements Context
         $this->tracer->finish($this->messageSpan);
     }
 
-	public function fromUberId( string $name, string $uberId ) {
-		$this->assertHasTracer();
-
-		$filledUberId = $this->fillUberIdIfNecessary($uberId);
-
-		$context = $this->codec->decode($filledUberId);
-		$this->messageSpan = $this->tracer->start($name, [], $context);
-		return $this;
-    }
-
-	private function fillUberIdIfNecessary( string $uberId ) {
-		$parts = collect(explode(':', $uberId));
-
-		while($parts->count() < 4)
-			$parts->push('0');
-
-		return $parts->implode(':');
-	}
-
     public function parse(string $name, array $data)
     {
     	$this->assertHasTracer();
 
 	    $context = $this->parseContext( collect($data) );
-	    $this->messageSpan= $this->tracer->start($name, [], $context);
+	    $this->messageSpan = $this->tracer->start($name, [], $context);
 
         // Set the uuid as a tag for this trace
         $this->uuid = Uuid::uuid1();
@@ -119,54 +98,32 @@ class SpanContext implements Context
 	 * @return \Jaeger\Span\Context\SpanContext|null
 	 */
 	protected function parseContext( Collection $data ) {
-		try {
-			return $this->parseUberTraceId($data);
-		} catch(NoUberTraceIdException $exception) {
-			// continue
-		}
+		$context = null;
+		$this->extractCodecs->each(function(CodecInterface $codec, $headerName) use ($data, &$context) {
+			$value = $this->getHeader($data, $headerName);
 
-		try {
-			return $this->parseXTraceId($data);
-		} catch(NoXTraceException $e) {
-			//continue
-		}
+			if( empty($value) )
+				return null;
 
-		return null;
+			$context = $codec->decode($value);
+			return false;
+		});
+
+		if($context === null)
+			return null;
+
+		return $context;
 	}
 
-	protected function parseUberTraceId(Collection $data) {
-		$uberTraceId = $data->first(function($value, $key) {
-			if(strtolower($key) === 'uber-trace-id') {
+	protected function getHeader( Collection $data, $headerName ) {
+		$headerValue = $data->first(function($value, $key) use ($headerName) {
+			if(strtolower($key) === strtolower($headerName)) {
 				return true;
 			}
 			return false;
 		});
 
-		if( empty($uberTraceId) )
-			throw new NoUberTraceIdException();
-
-		$context = $this->codec->decode( $uberTraceId );
-		return $context;
-	}
-
-	protected function parseXTraceId(Collection $data) {
-		$xTraceId = $data->first(function($value, $key) {
-			if(strtolower($key) === 'x-trace') {
-				return true;
-			}
-			return false;
-		});
-
-		if( empty($xTraceId) )
-			throw new NoXTraceException();
-
-		$data = json_decode( $xTraceId, true );
-
-		$context = $this->contextArrayConverter
-			->extract($data)
-			->getContext();
-
-		return $context;
+		return $headerValue;
 	}
 
     public function setPrivateTags(array $tags)
@@ -192,12 +149,10 @@ class SpanContext implements Context
     	$this->assertHasTracer();
     	$this->assertHasSpan();
 
-        $context = $this->messageSpan->getContext();
-
-        $xtraceData = [];
-        $this->contextArrayConverter->setContext($this->messageSpan->getContext())->inject($xtraceData);
-        $messageData['x-trace'] = json_encode($xtraceData);
-        $messageData['uber-trace-id'] = $this->codec->encode($context);
+        $this->injectCodecs->each(function(CodecInterface $codec, $headerName) use (&$messageData) {
+	        $context = $this->messageSpan->getContext();
+        	$messageData[$headerName] = $codec->encode($context);
+        });
     }
 
 	public function log( array $fields ) {
@@ -233,11 +188,11 @@ class SpanContext implements Context
         return new WrapperContext($context, $this);
 	}
 
-	public function registerInjectCodec(CodecInterface $codec) {
-    	$this->injectCodecs->push($codec);
+	public function registerInjectCodec($headerName, CodecInterface $codec) {
+    	$this->injectCodecs->put($headerName, $codec);
 	}
 
-	public function registerExtractCodec(CodecInterface $codec) {
-    	$this->extractCodecs->push($codec);
+	public function registerExtractCodec($headerName, CodecInterface $codec) {
+    	$this->extractCodecs->put($headerName, $codec);
 	}
 }
