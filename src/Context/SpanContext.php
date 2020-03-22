@@ -1,5 +1,6 @@
 <?php namespace Ipunkt\LaravelJaeger\Context;
 
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Ipunkt\LaravelJaeger\Context\ContextArrayConverter\ContextArrayConverter;
 use Ipunkt\LaravelJaeger\Context\Exceptions\NoSpanException;
@@ -123,7 +124,7 @@ class SpanContext implements Context
 			return false;
 		});
 
-		return $headerValue;
+		return Arr::first($headerValue);
 	}
 
     public function setPrivateTags(array $tags)
