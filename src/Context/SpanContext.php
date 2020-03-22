@@ -7,7 +7,6 @@ use Ipunkt\LaravelJaeger\Context\Exceptions\NoTracerException;
 use Ipunkt\LaravelJaeger\Context\Exceptions\NoUberTraceIdException;
 use Ipunkt\LaravelJaeger\Context\Exceptions\NoXTraceException;
 use Ipunkt\LaravelJaeger\LogCleaner\LogCleaner;
-use Ipunkt\LaravelJaeger\TagPropagator\TagPropagator;
 use Jaeger\Codec\CodecInterface;
 use Jaeger\Log\UserLog;
 use Jaeger\Span\Span;
@@ -38,10 +37,6 @@ class SpanContext implements Context
      */
     protected $uuid;
 
-    /**
-     * @var TagPropagator
-     */
-    protected $tagPropagator;
 	/**
 	 * @var LogCleaner
 	 */
@@ -58,17 +53,15 @@ class SpanContext implements Context
 
 	/**
 	 * MessageContext constructor.
-	 * @param TagPropagator $tagPropagator
 	 * @param CodecInterface $codec
 	 * @param ContextArrayConverter $contextArrayConverter
 	 * @param LogCleaner $logCleaner
 	 */
-    public function __construct(TagPropagator $tagPropagator,
+    public function __construct(
 								CodecInterface $codec,
 								ContextArrayConverter $contextArrayConverter,
 								LogCleaner $logCleaner)
     {
-        $this->tagPropagator = $tagPropagator;
 	    $this->logCleaner = $logCleaner;
 	    $this->codec = $codec;
 	    $this->contextArrayConverter = $contextArrayConverter;
@@ -115,10 +108,6 @@ class SpanContext implements Context
 	        'uuid' => (string)$this->uuid,
 	        'environment' => app()->environment(),
         ]);
-	    $this->tagPropagator
-		    ->extract( $data )
-			->apply($this->messageSpan);
-
     }
 
 	/**
@@ -182,10 +171,12 @@ class SpanContext implements Context
             $this->messageSpan->addTag( new StringTag($name, $value) );
     }
 
+	/**
+	 * @param array $tags
+	 * @deprecated
+	 */
     public function setPropagatedTags(array $tags)
     {
-        $this->tagPropagator->addTags($tags);
-
         $this->setPrivateTags($tags);
     }
 
@@ -201,10 +192,8 @@ class SpanContext implements Context
 
         $xtraceData = [];
         $this->contextArrayConverter->setContext($this->messageSpan->getContext())->inject($xtraceData);
-        $messageData['x-trace'] = urlencode( json_encode($xtraceData) );
+        $messageData['x-trace'] = json_encode($xtraceData);
         $messageData['uber-trace-id'] = $this->codec->encode($context);
-
-        $this->tagPropagator->inject($messageData);
     }
 
 	public function log( array $fields ) {
@@ -237,7 +226,6 @@ class SpanContext implements Context
         $context->tracer = $this->tracer;
         $context->messageSpan = $this->tracer->start($name, [], $this->messageSpan->getContext());
         app()->instance('current-context', $context);
-        // TODO: return wrapper
         return new WrapperContext($context, $this);
 	}
 }
