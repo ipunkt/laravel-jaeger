@@ -10,7 +10,6 @@ return [
 	 *   - Example:
 	 */
 	'codecs' => [
-		// Codecs used to accept
 		/**
 		 * Codecs used extract context from http,rabbitmq etc header
 		 * codecs will be tried top to bottom and the first one to find a context will be used if multiple are present
